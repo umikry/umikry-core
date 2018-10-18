@@ -2,6 +2,7 @@ from keras.layers import Conv2d, MaxPooling2D, UpSampling2D
 from keras.model import Sequential
 import numpy as np
 
+
 def ImageGenerator(batch_size=32, is_training=False):
   while True:
     data = np.zeros((batch_size, 256, 256, 3))
