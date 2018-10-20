@@ -2,6 +2,7 @@ import os
 import wget
 import zipfile
 import sys
+import requests
 
 
 def downloadCocoData():
@@ -50,17 +51,37 @@ def downloadOpenImagesData():
         all_image_ids = all_image_ids | image_ids
 
     with open(meta_dir + 'validation-images-with-rotation.csv', 'r') as lines:
-      number_of_lines = len(open(meta_dir + 'validation-images-with-rotation.csv').readlines())
+      summary = {
+        'total_images': len(open(meta_dir + 'validation-images-with-rotation.csv').readlines()),
+        'images_in_classlist': 0,
+        'not_available': 0
+      }
       for i, line in enumerate(lines):
-        sys.stdout.write("\r{}/{}".format(i, number_of_lines))
+        sys.stdout.write("\r{}/{}".format(i, summary['total_images']))
         sys.stdout.write("\033[K")
         sys.stdout.flush()
         image_id, _, original_url = line.split(',')[:3]
         if image_id in all_image_ids:
-          wget.download(original_url, image_dir + original_url.split('/')[-1], bar=None)
-          # TODO: clear flickr no longer available images
+          summary['images_in_classlist'] = summary['images_in_classlist'] + 1
+          url = original_url
+          file_name = original_url.split('/')[-1]
+          req = requests.get(url)
+          # check if filename changed eg. due to a flickr no longer available image
+          if req.url.split('/')[-1] == file_name:
+            with open(image_dir + file_name, 'wb') as image:
+              image.write(req.content)
+          else:
+            summary['not_available'] = summary['not_available'] + 1
           # TODO: draw truth out of bounding boxes
           # TODO: save subimages like nose etc.
+    sys.stdout.write("\r")
+    sys.stdout.write("\033[K")
+    sys.stdout.flush()
+    print(('{} pictures were downloaded. {} OpenImages (val) total,'
+          ' {} in class list and {} are not available anymore').format(
+          summary['images_in_classlist'] - summary['not_available'],
+          summary['total_images'], summary['images_in_classlist'],
+          summary['not_available']))
 
 
 if __name__ == '__main__':
