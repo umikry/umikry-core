@@ -1,2 +1,4 @@
 wget>=3.2
 requests>=2.20.0
+opencv-python>=3.4.3.18
+numpy>=1.14.2
