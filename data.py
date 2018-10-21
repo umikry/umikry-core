@@ -131,7 +131,8 @@ def downloadOpenImagesData(base_dir=''):
           summary['images_in_classlist'] - summary['not_available'],
           summary['total_images'], summary['images_in_classlist'],
           summary['not_available']))
-  print('OpenImages folder already exists. Please remove it manually to proceed.')
+  else:
+    print('OpenImages folder already exists. Please remove it manually to proceed.')
 
 
 if __name__ == '__main__':
