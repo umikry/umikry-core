@@ -105,7 +105,7 @@ class UmikryFaceDetector():
       self.model.load_weights(pretrained_weights)
 
   def build(self):
-    image = Input(shape=(512, 512, 3))
+    image = Input(shape=(None, None, 3))
     conv1 = Conv2D(8, 3, activation='relu', padding='same')(image)
     pool1 = MaxPooling2D()(conv1)
     conv2 = Conv2D(16, 3, activation='relu', padding='same')(pool1)
