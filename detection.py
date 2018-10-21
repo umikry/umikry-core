@@ -127,7 +127,7 @@ class UmikryFaceDetector():
     conv9 = Conv2D(8, 3, activation='relu', padding='same')(upscale4)
     score = Conv2D(1, 1, activation='sigmoid', padding='same')(conv9)
 
-    self.mode = Model(inputs=image, outputs=score)
+    self.model = Model(inputs=image, outputs=score)
     self.model.compile(optimizer='adam', loss='binary_crossentropy', metrics=['mse', 'accuracy'])
 
   def predict(self, image):
