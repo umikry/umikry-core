@@ -39,7 +39,7 @@ def generateTrainTestSet(data_location, datasets, test_size=0.1, override=True):
           testlist.write(data + ',' + label + '\n')
 
 
-def random_crop_or_pad(image, truth, size=(256, 256)):
+def random_crop_or_pad(image, truth, size=(64, 64)):
     assert image.shape[:2] == truth.shape[:2]
 
     if image.shape[0] > size[0]:
@@ -76,8 +76,8 @@ def ImageGenerator(data_location, batch_size=32, is_training=False, class_to_det
     dataset = open(os.path.join(data_location, 'test.txt')).readlines()
 
   while True:
-    data = np.zeros((batch_size, 256, 256, 3))
-    labels = np.zeros((batch_size, 256, 256, 1))
+    data = np.zeros((batch_size, 64, 64, 3))
+    labels = np.zeros((batch_size, 64, 64, 1))
     for i in range(batch_size):
       random_line = random.choice(dataset)
       image_file = random_line.split(',')[0]
@@ -98,11 +98,11 @@ class UmikryFaceDetector():
 
   def build(self):
     self.model = Sequential()
-    self.model.add(Conv2D(32, 3, activation='relu', padding='same', input_shape=(None, None, 3)))
+    self.model.add(Conv2D(16, 3, activation='relu', padding='same', input_shape=(None, None, 3)))
+    self.model.add(MaxPooling2D())
+    self.model.add(Conv2D(32, 3, activation='relu', padding='same'))
     self.model.add(MaxPooling2D())
     self.model.add(Conv2D(64, 3, activation='relu', padding='same'))
-    self.model.add(MaxPooling2D())
-    self.model.add(Conv2D(128, 3, activation='relu', padding='same'))
     self.model.add(Conv2D(1, 1, activation='sigmoid', padding='same'))
     self.model.add(UpSampling2D())
     self.model.add(Conv2D(1, 3, activation='relu', padding='same'))
@@ -133,5 +133,6 @@ if __name__ == '__main__':
 
   train_generator = ImageGenerator(data_dir, is_training=True)
   test_generator = ImageGenerator(data_dir)
-  umikryFaceDetector.train(train_generator, epochs=1, steps_per_epoch=100,
-                           test_generator=test_generator, validation_steps=10)
+  umikryFaceDetector.train(train_generator, epochs=10, steps_per_epoch=500,
+                           test_generator=test_generator, validation_steps=50)
+  umikryFaceDetector.model.save(os.path.join('models', 'community_facedetector.h5'))
