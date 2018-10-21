@@ -1,10 +1,11 @@
-from keras.layers import Conv2D, MaxPooling2D, UpSampling2D
-from keras.models import Sequential
+from keras.models import Model
+from keras.layers import Input, Conv2D, MaxPooling2D, UpSampling2D, Add
 import numpy as np
 import configparser
 import os
 import random
 import sys
+import math
 import cv2
 
 object_label = {
@@ -39,32 +40,36 @@ def generateTrainTestSet(data_location, datasets, test_size=0.1, override=True):
           testlist.write(data + ',' + label + '\n')
 
 
-def random_crop_or_pad(image, truth, size=(64, 64)):
-    assert image.shape[:2] == truth.shape[:2]
+def next_multiply_of_64(x):
+  return math.ceil(x / 64) * 64
+
+
+def pad_to_next_multiply_of_64(image):
+  diff_y = next_multiply_of_64(image.shape[0]) - image.shape[0]
+  diff_x = next_multiply_of_64(image.shape[1]) - image.shape[1]
+
+  border_top = int(diff_y / 2)
+  border_bottom = diff_y - border_top
+  border_left = int(diff_x / 2)
+  border_right = diff_x - border_left
+
+  return cv2.copyMakeBorder(image, border_top, border_bottom, border_left, border_right,
+                            cv2.BORDER_CONSTANT, value=0)
+
+
+def crop_random(image, truth, size=(64, 64)):
+    image = pad_to_next_multiply_of_64(image)
+    truth = pad_to_next_multiply_of_64(truth)
 
     if image.shape[0] > size[0]:
         crop_random_y = random.randint(0, image.shape[0] - size[0])
         image = image[crop_random_y:crop_random_y + size[0], :, :]
         truth = truth[crop_random_y:crop_random_y + size[0], :]
-    else:
-        zeros = np.zeros((size[0], image.shape[1], image.shape[2]), dtype=np.float32)
-        zeros[:image.shape[0], :image.shape[1], :] = image
-        image = np.copy(zeros)
-        zeros = np.zeros((size[0], truth.shape[1]), dtype=np.float32)
-        zeros[:truth.shape[0], :truth.shape[1]] = truth
-        truth = np.copy(zeros)
 
     if image.shape[1] > size[1]:
         crop_random_x = random.randint(0, image.shape[1] - size[1])
         image = image[:, crop_random_x:crop_random_x + size[1], :]
         truth = truth[:, crop_random_x:crop_random_x + size[1]]
-    else:
-        zeros = np.zeros((image.shape[0], size[1], image.shape[2]))
-        zeros[:image.shape[0], :image.shape[1], :] = image
-        image = np.copy(zeros)
-        zeros = np.zeros((truth.shape[0], size[1]))
-        zeros[:truth.shape[0], :truth.shape[1]] = truth
-        truth = np.copy(zeros)
 
     return image, truth.reshape(size[0], size[1], 1)
 
@@ -88,28 +93,46 @@ def ImageGenerator(data_location, batch_size=32, is_training=False, class_to_det
       label = np.zeros_like(truth_mask)
       label[truth_mask == object_label[class_to_detect]] = 1
 
-      data[i], labels[i] = random_crop_or_pad(image, label)
+      data[i], labels[i] = crop_random(image, label)
     yield data, labels
 
 
 class UmikryFaceDetector():
-  def __init__(self):
+  def __init__(self, pretrained_weights=None):
     self.build()
 
-  def build(self):
-    self.model = Sequential()
-    self.model.add(Conv2D(16, 3, activation='relu', padding='same', input_shape=(None, None, 3)))
-    self.model.add(MaxPooling2D())
-    self.model.add(Conv2D(32, 3, activation='relu', padding='same'))
-    self.model.add(MaxPooling2D())
-    self.model.add(Conv2D(64, 3, activation='relu', padding='same'))
-    self.model.add(Conv2D(1, 1, activation='sigmoid', padding='same'))
-    self.model.add(UpSampling2D())
-    self.model.add(Conv2D(1, 3, activation='relu', padding='same'))
-    self.model.add(UpSampling2D())
-    self.model.add(Conv2D(1, 1, activation='sigmoid', padding='same'))
+    if pretrained_weights is not None:
+      self.model.load_weights(pretrained_weights)
 
+  def build(self):
+    image = Input(shape=(512, 512, 3))
+    conv1 = Conv2D(8, 3, activation='relu', padding='same')(image)
+    pool1 = MaxPooling2D()(conv1)
+    conv2 = Conv2D(16, 3, activation='relu', padding='same')(pool1)
+    pool2 = MaxPooling2D(pool_size=4)(conv2)
+    conv3 = Conv2D(64, 3, activation='relu', padding='same')(pool2)
+    pool3 = MaxPooling2D(pool_size=4)(conv3)
+    conv4 = Conv2D(128, 3, activation='relu', padding='same')(pool3)
+    pool4 = MaxPooling2D()(conv4)
+    conv5 = Conv2D(256, 8, activation='relu', padding='same')(pool4)
+    upscale1 = UpSampling2D()(conv5)
+    conv6 = Conv2D(128, 3, activation='relu', padding='same')(upscale1)
+    fuse1 = Add()([conv6, conv4])
+    upscale2 = UpSampling2D(size=4)(fuse1)
+    conv7 = Conv2D(64, 3, activation='relu', padding='same')(upscale2)
+    upscale3 = UpSampling2D(size=4)(conv7)
+    conv8 = Conv2D(16, 3, activation='relu', padding='same')(upscale3)
+    fuse2 = Add()([conv8, conv2])
+    upscale4 = UpSampling2D()(fuse2)
+    conv9 = Conv2D(8, 3, activation='relu', padding='same')(upscale4)
+    score = Conv2D(1, 1, activation='sigmoid', padding='same')(conv9)
+
+    self.mode = Model(inputs=image, outputs=score)
     self.model.compile(optimizer='adam', loss='binary_crossentropy', metrics=['mse', 'accuracy'])
+
+  def predict(self, image):
+    prediction = self.model.predict(np.array([image]))[0]
+    return prediction.reshape(prediction.shape[0], prediction.shape[1])
 
   def train(self, train_generator, epochs=10, steps_per_epoch=1000, test_generator=None, validation_steps=None):
     self.model.fit_generator(train_generator, epochs=epochs, steps_per_epoch=steps_per_epoch,
@@ -133,6 +156,6 @@ if __name__ == '__main__':
 
   train_generator = ImageGenerator(data_dir, is_training=True)
   test_generator = ImageGenerator(data_dir)
-  umikryFaceDetector.train(train_generator, epochs=10, steps_per_epoch=500,
-                           test_generator=test_generator, validation_steps=50)
+  umikryFaceDetector.train(train_generator, epochs=20, steps_per_epoch=1000,
+                           test_generator=test_generator, validation_steps=100)
   umikryFaceDetector.model.save(os.path.join('models', 'community_facedetector.h5'))
