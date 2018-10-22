@@ -84,8 +84,8 @@ def ImageGenerator(data_location, batch_size=32, is_training=False, class_to_det
   while True:
     data = np.zeros((batch_size, 64, 64, 3))
     labels = np.zeros((batch_size, 64, 64, 1))
-    for i in range(batch_size):
-      random_line = random.choice(dataset)
+    random_lines = random.choice(dataset, batch_size)
+    for i, random_line in enumerate(random_lines):
       image_file = random_line.split(',')[0]
       truth_file = random_line.split(',')[1][:-1]
       image = np.float32(cv2.imread(os.path.join(data_location, image_file)) / 255.0)
