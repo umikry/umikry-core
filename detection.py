@@ -1,5 +1,5 @@
 from keras.models import Model
-from keras.layers import Input, Conv2D, MaxPooling2D, UpSampling2D, Add
+from keras.layers import Input, Conv2D, MaxPooling2D, UpSampling2D, Add, BatchNormalization, LeakyReLU
 import numpy as np
 import configparser
 import os
@@ -53,13 +53,14 @@ def pad_to_next_multiply_of_64(image):
   border_left = int(diff_x / 2)
   border_right = diff_x - border_left
 
-  return cv2.copyMakeBorder(image, border_top, border_bottom, border_left, border_right,
-                            cv2.BORDER_CONSTANT, value=0)
+  return (cv2.copyMakeBorder(image, border_top, border_bottom, border_left, border_right,
+                             cv2.BORDER_CONSTANT, value=0),
+          (border_top, border_bottom, border_left, border_right))
 
 
 def crop_random(image, truth, size=(64, 64)):
-    image = pad_to_next_multiply_of_64(image)
-    truth = pad_to_next_multiply_of_64(truth)
+    image, _ = pad_to_next_multiply_of_64(image)
+    truth, _ = pad_to_next_multiply_of_64(truth)
 
     if image.shape[0] > size[0]:
         crop_random_y = random.randint(0, image.shape[0] - size[0])
@@ -91,7 +92,7 @@ def ImageGenerator(data_location, batch_size=32, is_training=False, class_to_det
 
       truth_mask = cv2.imread(os.path.join(data_location, truth_file), cv2.IMREAD_GRAYSCALE)
       label = np.zeros_like(truth_mask)
-      label[truth_mask == object_label[class_to_detect]] = 1
+      label[truth_mask == object_label[class_to_detect]] = 1.0
 
       data[i], labels[i] = crop_random(image, label)
     yield data, labels
@@ -106,32 +107,53 @@ class UmikryFaceDetector():
 
   def build(self):
     image = Input(shape=(None, None, 3))
-    conv1 = Conv2D(8, 3, activation='relu', padding='same')(image)
+    conv1 = Conv2D(8, 3, padding='same', use_bias=False)(image)
+    conv1 = BatchNormalization()(conv1)
+    conv1 = LeakyReLU(alpha=0.1)(conv1)
     pool1 = MaxPooling2D()(conv1)
-    conv2 = Conv2D(16, 3, activation='relu', padding='same')(pool1)
+    conv2 = Conv2D(16, 3, padding='same', use_bias=False)(pool1)
+    conv2 = BatchNormalization()(conv2)
+    conv2 = LeakyReLU(alpha=0.1)(conv2)
     pool2 = MaxPooling2D(pool_size=4)(conv2)
-    conv3 = Conv2D(64, 3, activation='relu', padding='same')(pool2)
+    conv3 = Conv2D(32, 3, padding='same', use_bias=False)(pool2)
+    conv3 = BatchNormalization()(conv3)
+    conv3 = LeakyReLU(alpha=0.1)(conv3)
     pool3 = MaxPooling2D(pool_size=4)(conv3)
-    conv4 = Conv2D(128, 3, activation='relu', padding='same')(pool3)
+    conv4 = Conv2D(64, 3, padding='same', use_bias=False)(pool3)
+    conv4 = BatchNormalization()(conv4)
+    conv4 = LeakyReLU(alpha=0.1)(conv4)
     pool4 = MaxPooling2D()(conv4)
-    conv5 = Conv2D(256, 8, activation='relu', padding='same')(pool4)
+    conv5 = Conv2D(128, 8, padding='same', use_bias=False)(pool4)
+    conv5 = BatchNormalization()(conv5)
+    conv5 = LeakyReLU(alpha=0.1)(conv5)
     upscale1 = UpSampling2D()(conv5)
-    conv6 = Conv2D(128, 3, activation='relu', padding='same')(upscale1)
+    conv6 = Conv2D(64, 3, padding='same', use_bias=False)(upscale1)
+    conv6 = BatchNormalization()(conv6)
+    conv6 = LeakyReLU(alpha=0.1)(conv6)
     fuse1 = Add()([conv6, conv4])
     upscale2 = UpSampling2D(size=4)(fuse1)
-    conv7 = Conv2D(64, 3, activation='relu', padding='same')(upscale2)
+    conv7 = Conv2D(32, 3, padding='same', use_bias=False)(upscale2)
+    conv7 = BatchNormalization()(conv7)
+    conv7 = LeakyReLU(alpha=0.1)(conv7)
     upscale3 = UpSampling2D(size=4)(conv7)
-    conv8 = Conv2D(16, 3, activation='relu', padding='same')(upscale3)
+    conv8 = Conv2D(16, 3, padding='same', use_bias=False)(upscale3)
+    conv8 = BatchNormalization()(conv8)
+    conv8 = LeakyReLU(alpha=0.1)(conv8)
     fuse2 = Add()([conv8, conv2])
     upscale4 = UpSampling2D()(fuse2)
-    conv9 = Conv2D(8, 3, activation='relu', padding='same')(upscale4)
+    conv9 = Conv2D(8, 3, padding='same', use_bias=False)(upscale4)
+    conv9 = BatchNormalization()(conv9)
+    conv9 = LeakyReLU(alpha=0.1)(conv9)
     score = Conv2D(1, 1, activation='sigmoid', padding='same')(conv9)
 
     self.model = Model(inputs=image, outputs=score)
     self.model.compile(optimizer='adam', loss='binary_crossentropy', metrics=['mse', 'accuracy'])
 
   def predict(self, image):
-    prediction = self.model.predict(np.array([image]))[0]
+    image, border = pad_to_next_multiply_of_64(np.float32(image / 255.0))
+    prediction = np.uint8(self.model.predict(np.array([image]))[0])
+    prediction = prediction[border[0]:(prediction.shape[0] - border[1]),
+                            border[2]:(prediction.shape[1] - border[3]), :]
     return prediction.reshape(prediction.shape[0], prediction.shape[1])
 
   def train(self, train_generator, epochs=10, steps_per_epoch=1000, test_generator=None, validation_steps=None):
@@ -158,4 +180,4 @@ if __name__ == '__main__':
   test_generator = ImageGenerator(data_dir)
   umikryFaceDetector.train(train_generator, epochs=20, steps_per_epoch=1000,
                            test_generator=test_generator, validation_steps=100)
-  umikryFaceDetector.model.save(os.path.join('models', 'community_facedetector.h5'))
+  umikryFaceDetector.model.save_weights(os.path.join('models', 'community_facedetector_weights.h5'))
