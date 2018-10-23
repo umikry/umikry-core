@@ -6,3 +6,4 @@
 *.pyc
 __pycache__
 umikry.ini
+nohup.out
