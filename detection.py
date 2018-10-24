@@ -1,6 +1,7 @@
 from keras.models import Model
 from keras.layers import Input, Conv2D, MaxPooling2D, UpSampling2D, Add, BatchNormalization, LeakyReLU, Conv2DTranspose
 from keras.callbacks import ModelCheckpoint, EarlyStopping
+from keras import backend as K
 from keras.utils import Sequence
 import numpy as np
 import configparser
@@ -30,11 +31,11 @@ def generateTrainTestSet(data_location, datasets, test_size=0.1, override=True):
       os.unlink(os.path.join(data_location, 'test.txt'))
 
   for dataset in datasets:
-    available_labels = os.listdir(os.path.join(data_location, dataset, 'label'))
+    available_labels = os.listdir(os.path.join(data_location, dataset, 'faces_center_cropped_label'))
 
     for filename in available_labels:
-      data = os.path.join(dataset, 'images', filename)
-      label = os.path.join(dataset, 'label', filename)
+      data = os.path.join(dataset, 'faces_center_cropped', filename)
+      label = os.path.join(dataset, 'faces_center_cropped_label', filename)
       if random.random() > test_size:
         with open(os.path.join(data_location, 'train.txt'), 'a') as trainlist:
           trainlist.write(data + ',' + label + '\n')
@@ -43,13 +44,29 @@ def generateTrainTestSet(data_location, datasets, test_size=0.1, override=True):
           testlist.write(data + ',' + label + '\n')
 
 
-def next_multiply_of_64(x):
-  return math.ceil(x / 64) * 64
+def next_multiply_of_n(x, n):
+  return math.ceil(x / n) * n
 
 
-def pad_to_next_multiply_of_64(image):
-  diff_y = next_multiply_of_64(image.shape[0]) - image.shape[0]
-  diff_x = next_multiply_of_64(image.shape[1]) - image.shape[1]
+def pad_to(image, n, axis=0):
+  diff = n - image.shape[axis]
+
+  if axis == 0:
+    border_top = int(diff / 2)
+    border_bottom = diff - border_top
+    return (cv2.copyMakeBorder(image, border_top, border_bottom, 0, 0,
+                             cv2.BORDER_CONSTANT, value=0),
+          (border_top, border_bottom, 0, 0))
+  if axis == 1:
+    border_left = int(diff / 2)
+    border_right = diff - border_left
+    return (cv2.copyMakeBorder(image, 0, 0, border_left, border_right,
+                             cv2.BORDER_CONSTANT, value=0),
+          (0, 0, border_left, border_right))
+
+def pad_to_next_multiply_of_n(image, n):
+  diff_y = next_multiply_of_n(image.shape[0], n) - image.shape[0]
+  diff_x = next_multiply_of_n(image.shape[1], n) - image.shape[1]
 
   border_top = int(diff_y / 2)
   border_bottom = diff_y - border_top
@@ -61,21 +78,24 @@ def pad_to_next_multiply_of_64(image):
           (border_top, border_bottom, border_left, border_right))
 
 
-def crop_random(image, truth, size=(64, 64)):
-    image, _ = pad_to_next_multiply_of_64(image)
-    truth, _ = pad_to_next_multiply_of_64(truth)
-
+def crop_random(image, truth, size=(224, 224)):
+    if image.shape[0] < size[0]:
+      image, _ = pad_to(image, size[0], axis=0)
+      truth, _ = pad_to(truth, size[0], axis=0)
+    if image.shape[1] < size[1]:
+      image, _ = pad_to(image, size[1], axis=1)
+      truth, _ = pad_to(truth, size[1], axis=1)
+    
     if image.shape[0] > size[0]:
-        crop_random_y = random.randint(0, image.shape[0] - size[0])
-        image = image[crop_random_y:crop_random_y + size[0], :, :]
-        truth = truth[crop_random_y:crop_random_y + size[0], :]
-
+      crop_random_y = random.randint(0, image.shape[0] - size[0])
+      image = image[crop_random_y:crop_random_y + size[0], :, :]
+      truth = truth[crop_random_y:crop_random_y + size[0], :]
     if image.shape[1] > size[1]:
-        crop_random_x = random.randint(0, image.shape[1] - size[1])
-        image = image[:, crop_random_x:crop_random_x + size[1], :]
-        truth = truth[:, crop_random_x:crop_random_x + size[1]]
+      crop_random_x = random.randint(0, image.shape[1] - size[1])
+      image = image[:, crop_random_x:crop_random_x + size[1], :]
+      truth = truth[:, crop_random_x:crop_random_x + size[1]]
 
-    return image, truth.reshape(size[0], size[1], 1)
+    return image, truth.reshape(image.shape[0], image.shape[1], 1)
 
 class ImageSequence(Sequence):
     def __init__(self, data_location, batch_size=32, is_training=False, class_to_detect='face'):
@@ -92,19 +112,15 @@ class ImageSequence(Sequence):
 
     def __getitem__(self, i):
         files = self.dataset[(i * self.batch_size):((i + 1) * self.batch_size)]
-        data = np.zeros((self.batch_size, 64, 64, 3))
-        labels = np.zeros((self.batch_size, 64, 64, 1))
+        data = np.zeros((self.batch_size, 224, 224, 3))
+        labels = np.zeros((self.batch_size, 224, 224, 1))
 
         for i, sample in enumerate(files):
           image_file = sample.split(',')[0]
           truth_file = sample.split(',')[1][:-1]
           image = np.float32(cv2.imread(os.path.join(self.data_location, image_file)) / 255.0)
-
-          truth_mask = cv2.imread(os.path.join(self.data_location, truth_file), cv2.IMREAD_GRAYSCALE)
-          label = np.zeros_like(truth_mask)
-          label[truth_mask == object_label[self.class_to_detect]] = 1.0
-
-          data[i], labels[i] = crop_random(image, label)
+          truth = cv2.imread(os.path.join(self.data_location, truth_file), cv2.IMREAD_GRAYSCALE) / 255.0        
+          data[i], labels[i] = crop_random(image, truth)
         return data, labels
 
 
@@ -153,7 +169,7 @@ class UmikryFaceDetector():
   def train(self, train_generator, epochs=10, steps_per_epoch=None, test_generator=None, validation_steps=None, callbacks=None):
     self.model.fit_generator(train_generator, epochs=epochs, steps_per_epoch=steps_per_epoch,
                              validation_data=test_generator, validation_steps=validation_steps,
-                             use_multiprocessing=True, workers=2, callbacks=callbacks)
+                             use_multiprocessing=False, workers=1, callbacks=callbacks)
 
 
 if __name__ == '__main__':

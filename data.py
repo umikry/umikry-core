@@ -28,9 +28,13 @@ def downloadOpenImagesData(base_dir=''):
     data_dir = os.path.join(base_dir, 'OpenImages')
     image_dir = os.path.join(data_dir, 'images')
     label_dir = os.path.join(data_dir, 'label')
+    face_dir = os.path.join(data_dir, 'faces_center_cropped')
+    face_label_dir = os.path.join(data_dir, 'faces_center_cropped_label')
     meta_dir = os.path.join(data_dir, 'meta')
     os.makedirs(data_dir)
     os.mkdir(meta_dir)
+    os.mkdir(face_dir)
+    os.mkdir(face_label_dir)
     os.mkdir(image_dir)
     os.mkdir(label_dir)
 
@@ -113,7 +117,21 @@ def downloadOpenImagesData(base_dir=''):
                 y_end = int(event[5] * height)
                 x_start = int(event[2] * width)
                 x_end = int(event[3] * width)
-
+                
+                if event[1] == 'human_face':
+                    border = 500
+                    border_y_start = (y_start - border) if (y_start - border) > 0 else 0
+                    border_y_end = (y_end + border) if (y_end + border) < image.shape[0] else image.shape[0]
+                    border_x_start = (x_start - border) if (x_start - border) > 0 else 0
+                    border_x_end = (x_end + border) if (x_end + border) < image.shape[1] else image.shape[1]
+                    center_cropped = image[border_y_start:border_y_end, border_x_start:border_x_end]
+                    cv2.imwrite(os.path.join(face_dir, '{}_{}'.format(j, file_name)), center_cropped)
+                    
+                    face_label = np.zeros((image.shape[0], image.shape[1]))
+                    face_label[y_start:y_end, x_start:x_end] = 255
+                    center_cropped_label = face_label[border_y_start:border_y_end, border_x_start:border_x_end]
+                    cv2.imwrite(os.path.join(face_label_dir, '{}_{}'.format(j, file_name)), center_cropped_label)
+                
                 cv2.imwrite(os.path.join(data_dir, event[1], '{}_{}'.format(j, file_name)),
                             image[y_start:y_end, x_start:x_end])
                 # set label color, but do not override other labels
