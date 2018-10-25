@@ -12,13 +12,6 @@ import math
 import time
 import cv2
 
-object_label = {
-  'eye': 255,
-  'nose': 192,
-  'mouth': 128,
-  'face': 64
-}
-
 
 def generateTrainTestSet(data_location, datasets, test_size=0.1, override=True):
   if not os.path.isdir(data_location):
@@ -73,19 +66,19 @@ def pad_to_next_multiply_of_n(image, n):
   border_left = int(diff_x / 2)
   border_right = diff_x - border_left
 
-  return (cv2.copyMakeBorder(image, border_top, border_bottom, border_left, border_right,
-                             cv2.BORDER_CONSTANT, value=0),
-          (border_top, border_bottom, border_left, border_right))
+  padded_image = cv2.copyMakeBorder(image, border_top, border_bottom, border_left, border_right, 
+                                    cv2.BORDER_CONSTANT, value=0)
+  return padded_image, (border_top, border_bottom, border_left, border_right)
 
 
-def crop_random(image, truth, size=(224, 224)):
+def crop_random(image, truth, size=(512, 512)):
     if image.shape[0] < size[0]:
       image, _ = pad_to(image, size[0], axis=0)
       truth, _ = pad_to(truth, size[0], axis=0)
     if image.shape[1] < size[1]:
       image, _ = pad_to(image, size[1], axis=1)
       truth, _ = pad_to(truth, size[1], axis=1)
-    
+
     if image.shape[0] > size[0]:
       crop_random_y = random.randint(0, image.shape[0] - size[0])
       image = image[crop_random_y:crop_random_y + size[0], :, :]
@@ -98,12 +91,12 @@ def crop_random(image, truth, size=(224, 224)):
     return image, truth.reshape(image.shape[0], image.shape[1], 1)
 
 class ImageSequence(Sequence):
-    def __init__(self, data_location, batch_size=32, is_training=False, class_to_detect='face'):
+    def __init__(self, data_location, batch_size=32, is_training=False):
         if is_training:
           self.dataset = open(os.path.join(data_location, 'train.txt')).readlines()
         else:
-          self.dataset = open(os.path.join(data_location, 'test.txt')).readlines()	        
-        self.class_to_detect = class_to_detect
+          self.dataset = open(os.path.join(data_location, 'test.txt')).readlines()
+
         self.data_location = data_location
         self.batch_size = batch_size
 
@@ -112,14 +105,14 @@ class ImageSequence(Sequence):
 
     def __getitem__(self, i):
         files = self.dataset[(i * self.batch_size):((i + 1) * self.batch_size)]
-        data = np.zeros((self.batch_size, 224, 224, 3))
-        labels = np.zeros((self.batch_size, 224, 224, 1))
+        data = np.zeros((self.batch_size, 512, 512, 3))
+        labels = np.zeros((self.batch_size, 512, 512, 1))
 
         for i, sample in enumerate(files):
           image_file = sample.split(',')[0]
           truth_file = sample.split(',')[1][:-1]
           image = np.float32(cv2.imread(os.path.join(self.data_location, image_file)) / 255.0)
-          truth = cv2.imread(os.path.join(self.data_location, truth_file), cv2.IMREAD_GRAYSCALE) / 255.0        
+          truth = cv2.imread(os.path.join(self.data_location, truth_file), cv2.IMREAD_GRAYSCALE) / 255.
           data[i], labels[i] = crop_random(image, truth)
         return data, labels
 
@@ -160,7 +153,8 @@ class UmikryFaceDetector():
     self.model.compile(optimizer='adam', loss='binary_crossentropy', metrics=['mse', 'accuracy'])
 
   def predict(self, image):
-    image, border = pad_to_next_multiply_of_64(np.float32(image / 255.0))
+    image, border = pad_to_next_multiply_of_n(image[0], 8)
+    image = np.float32(image / 255.0)
     prediction = np.uint8(self.model.predict(np.array([image]))[0])
     prediction = prediction[border[0]:(prediction.shape[0] - border[1]),
                             border[2]:(prediction.shape[1] - border[3]), :]

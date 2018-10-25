@@ -119,7 +119,7 @@ def downloadOpenImagesData(base_dir=''):
                 x_end = int(event[3] * width)
                 
                 if event[1] == 'human_face':
-                    border = 500
+                    border = 100
                     border_y_start = (y_start - border) if (y_start - border) > 0 else 0
                     border_y_end = (y_end + border) if (y_end + border) < image.shape[0] else image.shape[0]
                     border_x_start = (x_start - border) if (x_start - border) > 0 else 0
