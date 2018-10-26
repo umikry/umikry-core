@@ -112,6 +112,8 @@ def downloadOpenImagesData(base_dir=''):
               height = image.shape[0]
               width = image.shape[1]
               label = np.zeros((height, width))
+              face_label = np.zeros((image.shape[0], image.shape[1]))
+              faces = []
               for j, event in enumerate(events):
                 y_start = int(event[4] * height)
                 y_end = int(event[5] * height)
@@ -124,14 +126,9 @@ def downloadOpenImagesData(base_dir=''):
                     border_y_end = (y_end + border) if (y_end + border) < image.shape[0] else image.shape[0]
                     border_x_start = (x_start - border) if (x_start - border) > 0 else 0
                     border_x_end = (x_end + border) if (x_end + border) < image.shape[1] else image.shape[1]
-                    center_cropped = image[border_y_start:border_y_end, border_x_start:border_x_end]
-                    cv2.imwrite(os.path.join(face_dir, '{}_{}'.format(j, file_name)), center_cropped)
-                    
-                    face_label = np.zeros((image.shape[0], image.shape[1]))
+                    faces.append((border_y_start, border_y_end, border_x_start, border_x_end))
                     face_label[y_start:y_end, x_start:x_end] = 255
-                    center_cropped_label = face_label[border_y_start:border_y_end, border_x_start:border_x_end]
-                    cv2.imwrite(os.path.join(face_label_dir, '{}_{}'.format(j, file_name)), center_cropped_label)
-                
+                    
                 cv2.imwrite(os.path.join(data_dir, event[1], '{}_{}'.format(j, file_name)),
                             image[y_start:y_end, x_start:x_end])
                 # set label color, but do not override other labels
@@ -139,6 +136,12 @@ def downloadOpenImagesData(base_dir=''):
                   label[y_start:y_end, x_start:x_end] == 0)] = object_label[event[1]]
 
               cv2.imwrite(os.path.join(label_dir, file_name), label)
+              if faces:
+                for j, face in enumerate(faces):
+                  cv2.imwrite(os.path.join(face_dir, '{}_{}'.format(j, file_name)), 
+                              image[face[0]:face[1], face[2]:face[3]])
+                  cv2.imwrite(os.path.join(face_label_dir, '{}_{}'.format(j, file_name)), 
+                              face_label[face[0]:face[1], face[2]:face[3]])
           else:
             summary['not_available'] = summary['not_available'] + 1
     sys.stdout.write("\r")

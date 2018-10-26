@@ -91,7 +91,7 @@ def crop_random(image, truth, size=(512, 512)):
     return image, truth.reshape(image.shape[0], image.shape[1], 1)
 
 class ImageSequence(Sequence):
-    def __init__(self, data_location, batch_size=32, is_training=False):
+    def __init__(self, data_location, batch_size=32, is_training=False, patch_size=(512, 512), plain_images=False):
         if is_training:
           self.dataset = open(os.path.join(data_location, 'train.txt')).readlines()
         else:
@@ -99,22 +99,34 @@ class ImageSequence(Sequence):
 
         self.data_location = data_location
         self.batch_size = batch_size
+        self.patch_size = patch_size
+        self.plain_images = plain_images
 
     def __len__(self):
         return len(self.dataset) // self.batch_size
 
     def __getitem__(self, i):
-        files = self.dataset[(i * self.batch_size):((i + 1) * self.batch_size)]
-        data = np.zeros((self.batch_size, 512, 512, 3))
-        labels = np.zeros((self.batch_size, 512, 512, 1))
-
-        for i, sample in enumerate(files):
+        if self.plain_images:
+          sample = self.dataset[i]
           image_file = sample.split(',')[0]
-          truth_file = sample.split(',')[1][:-1]
+          truth_file = sample.split(',')[1][:-1]        
           image = np.float32(cv2.imread(os.path.join(self.data_location, image_file)) / 255.0)
-          truth = cv2.imread(os.path.join(self.data_location, truth_file), cv2.IMREAD_GRAYSCALE) / 255.
-          data[i], labels[i] = crop_random(image, truth)
-        return data, labels
+          truth = cv2.imread(os.path.join(self.data_location, truth_file), cv2.IMREAD_GRAYSCALE) / 255.            
+          data, _ = pad_to_next_multiply_of_n(image, 8)
+          label, _ = pad_to_next_multiply_of_n(truth, 8)
+          return np.expand_dims(data, axis=0), np.expand_dims(label, axis=0)
+        else:
+          files = self.dataset[(i * self.batch_size):((i + 1) * self.batch_size)]
+          data = np.zeros((self.batch_size, self.patch_size[0], self.patch_size[1], 3))
+          labels = np.zeros((self.batch_size, self.patch_size[0], self.patch_size[1], 1))
+
+          for i, sample in enumerate(files):
+            image_file = sample.split(',')[0]
+            truth_file = sample.split(',')[1][:-1]
+            image = np.float32(cv2.imread(os.path.join(self.data_location, image_file)) / 255.0)
+            truth = cv2.imread(os.path.join(self.data_location, truth_file), cv2.IMREAD_GRAYSCALE) / 255.
+            data[i], labels[i] = crop_random(image, truth, size=self.patch_size)
+          return data, labels
 
 
 class UmikryFaceDetector():
@@ -133,21 +145,30 @@ class UmikryFaceDetector():
     conv2 = Conv2D(16, 3, padding='same', use_bias=False)(pool1)
     conv2 = BatchNormalization()(conv2)
     conv2 = LeakyReLU(alpha=0.1)(conv2)
-    pool2 = MaxPooling2D(pool_size=4)(conv2)
+    pool2 = MaxPooling2D()(conv2)
     conv3 = Conv2D(32, 3, padding='same', use_bias=False)(pool2)
     conv3 = BatchNormalization()(conv3)
     conv3 = LeakyReLU(alpha=0.1)(conv3)
-    score = Conv2D(1, 1, padding='same', activation='sigmoid')(conv3)
-    upscale3 = UpSampling2D(size=4)(score)
-    conv4 = Conv2DTranspose(16, 3, padding='same', use_bias=False)(upscale3)
+    pool3 = MaxPooling2D()(conv3)
+    conv4 = Conv2D(64, 3, padding='same', use_bias=False)(pool3)
     conv4 = BatchNormalization()(conv4)
     conv4 = LeakyReLU(alpha=0.1)(conv4)
-    fuse2 = Add()([conv4, conv2])
-    upscale4 = UpSampling2D()(fuse2)
-    conv5 = Conv2DTranspose(8, 3, padding='same', use_bias=False)(upscale4)
+    score = Conv2D(1, 1, padding='same', activation='sigmoid')(conv4)
+    upscale1 = UpSampling2D()(score)
+    conv5 = Conv2DTranspose(32, 3, padding='same', use_bias=False)(upscale1)
     conv5 = BatchNormalization()(conv5)
     conv5 = LeakyReLU(alpha=0.1)(conv5)
-    final_score = Conv2D(1, 1, activation='sigmoid', padding='same')(conv5)
+    fuse2 = Add()([conv5, conv3])
+    upscale2 = UpSampling2D()(fuse2)
+    conv6 = Conv2DTranspose(16, 3, padding='same', use_bias=False)(upscale2)
+    conv6 = BatchNormalization()(conv6)
+    conv6 = LeakyReLU(alpha=0.1)(conv6)
+    fuse2 = Add()([conv6, conv2])
+    upscale3 = UpSampling2D()(fuse2)
+    conv7 = Conv2DTranspose(8, 3, padding='same', use_bias=False)(upscale3)
+    conv7 = BatchNormalization()(conv7)
+    conv7 = LeakyReLU(alpha=0.1)(conv7)
+    final_score = Conv2D(1, 1, activation='sigmoid', padding='same')(conv7)
 
     self.model = Model(inputs=image, outputs=final_score)
     self.model.compile(optimizer='adam', loss='binary_crossentropy', metrics=['mse', 'accuracy'])
@@ -163,7 +184,7 @@ class UmikryFaceDetector():
   def train(self, train_generator, epochs=10, steps_per_epoch=None, test_generator=None, validation_steps=None, callbacks=None):
     self.model.fit_generator(train_generator, epochs=epochs, steps_per_epoch=steps_per_epoch,
                              validation_data=test_generator, validation_steps=validation_steps,
-                             use_multiprocessing=False, workers=1, callbacks=callbacks)
+                             use_multiprocessing=True, workers=2, callbacks=callbacks)
 
 
 if __name__ == '__main__':
@@ -181,8 +202,8 @@ if __name__ == '__main__':
   umikryFaceDetector = UmikryFaceDetector()
   generateTrainTestSet(data_dir, datasets=['OpenImages'])
 
-  train_sequence = ImageSequence(data_dir, batch_size=16, is_training=True)
-  test_sequence = ImageSequence(data_dir, batch_size=16)
+  train_sequence = ImageSequence(data_dir, batch_size=16, patch_size=(384, 384), is_training=True)
+  test_sequence = ImageSequence(data_dir, batch_size=16, patch_size=(384, 384))
 
   checkpoint_dir = 'models'
   model_checkpoint = ModelCheckpoint(os.path.join(checkpoint_dir, 'community_facedetector_weights.{epoch:02d}-{val_loss:.2f}.h5'), save_weights_only=True, save_best_only=True, monitor='val_acc')
