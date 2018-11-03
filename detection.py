@@ -153,8 +153,7 @@ class UmikryFaceDetector():
     conv4 = Conv2D(64, 3, padding='same', use_bias=False)(pool3)
     conv4 = BatchNormalization()(conv4)
     conv4 = LeakyReLU(alpha=0.1)(conv4)
-    score = Conv2D(1, 1, padding='same', activation='sigmoid')(conv4)
-    upscale1 = UpSampling2D()(score)
+    upscale1 = UpSampling2D()(conv4)
     conv5 = Conv2DTranspose(32, 3, padding='same', use_bias=False)(upscale1)
     conv5 = BatchNormalization()(conv5)
     conv5 = LeakyReLU(alpha=0.1)(conv5)
@@ -165,7 +164,7 @@ class UmikryFaceDetector():
     conv6 = LeakyReLU(alpha=0.1)(conv6)
     fuse2 = Add()([conv6, conv2])
     upscale3 = UpSampling2D()(fuse2)
-    conv7 = Conv2DTranspose(8, 3, padding='same', use_bias=False)(upscale3)
+    conv7 = Conv2DTranspose(8, 5, padding='same', use_bias=False)(upscale3)
     conv7 = BatchNormalization()(conv7)
     conv7 = LeakyReLU(alpha=0.1)(conv7)
     final_score = Conv2D(1, 1, activation='sigmoid', padding='same')(conv7)
@@ -176,7 +175,7 @@ class UmikryFaceDetector():
   def predict(self, image):
     image, border = pad_to_next_multiply_of_n(image[0], 8)
     image = np.float32(image / 255.0)
-    prediction = np.uint8(self.model.predict(np.array([image]))[0])
+    prediction = self.model.predict(np.array([image]))[0]
     prediction = prediction[border[0]:(prediction.shape[0] - border[1]),
                             border[2]:(prediction.shape[1] - border[3]), :]
     return prediction.reshape(prediction.shape[0], prediction.shape[1])

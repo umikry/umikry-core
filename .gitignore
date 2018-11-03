@@ -8,3 +8,4 @@ __pycache__
 umikry.ini
 nohup.out
 models/community_facedetector_weights.*.h5
+gan_output
