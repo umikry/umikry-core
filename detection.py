@@ -72,104 +72,117 @@ def pad_to_next_multiply_of_n(image, n):
 
 
 def crop_random(image, truth, size=(512, 512)):
-    if image.shape[0] < size[0]:
-      image, _ = pad_to(image, size[0], axis=0)
-      truth, _ = pad_to(truth, size[0], axis=0)
-    if image.shape[1] < size[1]:
-      image, _ = pad_to(image, size[1], axis=1)
-      truth, _ = pad_to(truth, size[1], axis=1)
+  if image.shape[0] < size[0]:
+    image, _ = pad_to(image, size[0], axis=0)
+    truth, _ = pad_to(truth, size[0], axis=0)
+  if image.shape[1] < size[1]:
+    image, _ = pad_to(image, size[1], axis=1)
+    truth, _ = pad_to(truth, size[1], axis=1)
 
-    if image.shape[0] > size[0]:
-      crop_random_y = random.randint(0, image.shape[0] - size[0])
-      image = image[crop_random_y:crop_random_y + size[0], :, :]
-      truth = truth[crop_random_y:crop_random_y + size[0], :]
-    if image.shape[1] > size[1]:
-      crop_random_x = random.randint(0, image.shape[1] - size[1])
-      image = image[:, crop_random_x:crop_random_x + size[1], :]
-      truth = truth[:, crop_random_x:crop_random_x + size[1]]
+  if image.shape[0] > size[0]:
+    crop_random_y = random.randint(0, image.shape[0] - size[0])
+    image = image[crop_random_y:crop_random_y + size[0], :, :]
+    truth = truth[crop_random_y:crop_random_y + size[0], :]
+  if image.shape[1] > size[1]:
+    crop_random_x = random.randint(0, image.shape[1] - size[1])
+    image = image[:, crop_random_x:crop_random_x + size[1], :]
+    truth = truth[:, crop_random_x:crop_random_x + size[1]]
 
-    return image, truth.reshape(image.shape[0], image.shape[1], 1)
+  return image, truth.reshape(image.shape[0], image.shape[1], 1)
 
 class ImageSequence(Sequence):
-    def __init__(self, data_location, batch_size=32, is_training=False, patch_size=(512, 512), plain_images=False):
-        if is_training:
-          self.dataset = open(os.path.join(data_location, 'train.txt')).readlines()
-        else:
-          self.dataset = open(os.path.join(data_location, 'test.txt')).readlines()
+  def __init__(self, data_location, batch_size=32, is_training=False, patch_size=(512, 512), plain_images=False):
+    if is_training:
+      self.dataset = open(os.path.join(data_location, 'train.txt')).readlines()
+    else:
+      self.dataset = open(os.path.join(data_location, 'test.txt')).readlines()
 
-        self.data_location = data_location
-        self.batch_size = batch_size
-        self.patch_size = patch_size
-        self.plain_images = plain_images
+    self.data_location = data_location
+    self.batch_size = batch_size
+    self.patch_size = patch_size
+    self.plain_images = plain_images
 
-    def __len__(self):
-        return len(self.dataset) // self.batch_size
+  def __len__(self):
+    return len(self.dataset) // self.batch_size
 
-    def __getitem__(self, i):
-        if self.plain_images:
-          sample = self.dataset[i]
-          image_file = sample.split(',')[0]
-          truth_file = sample.split(',')[1][:-1]        
-          image = np.float32(cv2.imread(os.path.join(self.data_location, image_file)) / 255.0)
-          truth = cv2.imread(os.path.join(self.data_location, truth_file), cv2.IMREAD_GRAYSCALE) / 255.            
-          data, _ = pad_to_next_multiply_of_n(image, 8)
-          label, _ = pad_to_next_multiply_of_n(truth, 8)
-          return np.expand_dims(data, axis=0), np.expand_dims(label, axis=0)
-        else:
-          files = self.dataset[(i * self.batch_size):((i + 1) * self.batch_size)]
-          data = np.zeros((self.batch_size, self.patch_size[0], self.patch_size[1], 3))
-          labels = np.zeros((self.batch_size, self.patch_size[0], self.patch_size[1], 1))
+  def __getitem__(self, i):
+    if self.plain_images:
+      sample = self.dataset[i]
+      image_file = sample.split(',')[0]
+      truth_file = sample.split(',')[1][:-1]        
+      image = np.float32(cv2.imread(os.path.join(self.data_location, image_file)) / 255.0)
+      truth = cv2.imread(os.path.join(self.data_location, truth_file), cv2.IMREAD_GRAYSCALE) / 255.            
+      data, _ = pad_to_next_multiply_of_n(image, 8)
+      label, _ = pad_to_next_multiply_of_n(truth, 8)
+      return np.expand_dims(data, axis=0), np.expand_dims(label, axis=0)
+    else:
+      files = self.dataset[(i * self.batch_size):((i + 1) * self.batch_size)]
+      data = np.zeros((self.batch_size, self.patch_size[0], self.patch_size[1], 3))
+      labels = np.zeros((self.batch_size, self.patch_size[0], self.patch_size[1], 1))
 
-          for i, sample in enumerate(files):
-            image_file = sample.split(',')[0]
-            truth_file = sample.split(',')[1][:-1]
-            image = np.float32(cv2.imread(os.path.join(self.data_location, image_file)) / 255.0)
-            truth = cv2.imread(os.path.join(self.data_location, truth_file), cv2.IMREAD_GRAYSCALE) / 255.
-            data[i], labels[i] = crop_random(image, truth, size=self.patch_size)
-          return data, labels
+      for i, sample in enumerate(files):
+        image_file = sample.split(',')[0]
+        truth_file = sample.split(',')[1][:-1]
+        image = np.float32(cv2.imread(os.path.join(self.data_location, image_file)) / 255.0)
+        truth = cv2.imread(os.path.join(self.data_location, truth_file), cv2.IMREAD_GRAYSCALE) / 255.
+        data[i], labels[i] = crop_random(image, truth, size=self.patch_size)
+      return data, labels
 
 
 class UmikryFaceDetector():
-  def __init__(self, pretrained_weights=None):
+  def __init__(self, pretrained_weights=None, encoder_weights=None):
     self.build()
 
     if pretrained_weights is not None:
       self.model.load_weights(pretrained_weights)
+    elif encoder_weights is not None:
+      self.model.load_weights(encoder_weights, by_name=True)
 
   def build(self):
     image = Input(shape=(None, None, 3))
-    conv1 = Conv2D(8, 3, padding='same', use_bias=False)(image)
-    conv1 = BatchNormalization()(conv1)
-    conv1 = LeakyReLU(alpha=0.1)(conv1)
-    pool1 = MaxPooling2D()(conv1)
-    conv2 = Conv2D(16, 3, padding='same', use_bias=False)(pool1)
-    conv2 = BatchNormalization()(conv2)
-    conv2 = LeakyReLU(alpha=0.1)(conv2)
-    pool2 = MaxPooling2D()(conv2)
-    conv3 = Conv2D(32, 3, padding='same', use_bias=False)(pool2)
-    conv3 = BatchNormalization()(conv3)
-    conv3 = LeakyReLU(alpha=0.1)(conv3)
-    pool3 = MaxPooling2D()(conv3)
-    conv4 = Conv2D(64, 3, padding='same', use_bias=False)(pool3)
-    conv4 = BatchNormalization()(conv4)
-    conv4 = LeakyReLU(alpha=0.1)(conv4)
-    upscale1 = UpSampling2D()(conv4)
-    conv5 = Conv2DTranspose(32, 3, padding='same', use_bias=False)(upscale1)
-    conv5 = BatchNormalization()(conv5)
-    conv5 = LeakyReLU(alpha=0.1)(conv5)
-    fuse2 = Add()([conv5, conv3])
-    upscale2 = UpSampling2D()(fuse2)
-    conv6 = Conv2DTranspose(16, 3, padding='same', use_bias=False)(upscale2)
+    conv1 = Conv2D(16, 3, padding='same', name='d_conv_1')(image)
+    conv1 = LeakyReLU(alpha=0.1, name='d_relu_1')(conv1)
+    pool1 = MaxPooling2D(name='d_pool1')(conv1)
+    
+    conv2 = Conv2D(32, 3, padding='same', use_bias=False, name='d_conv_2')(pool1)
+    conv2 = BatchNormalization(momentum=0.8, name='d_bn_1')(conv2)
+    conv2 = LeakyReLU(alpha=0.1, name='d_relu_2')(conv2)
+    pool2 = MaxPooling2D(name='d_pool2')(conv2)
+    
+    conv3 = Conv2D(64, 3, padding='same', use_bias=False, name='d_conv_3')(pool2)
+    conv3 = BatchNormalization(momentum=0.8, name='d_bn_2')(conv3)
+    conv3 = LeakyReLU(alpha=0.1, name='d_relu_3')(conv3)
+    pool3 = MaxPooling2D(name='d_pool3')(conv3)
+
+    conv4 = Conv2D(128, 3, padding='same', use_bias=False, name='d_conv_4')(pool3)
+    conv4 = BatchNormalization(momentum=0.8, name='d_bn_3')(conv4)
+    conv4 = LeakyReLU(alpha=0.1, name='d_relu_4')(conv4)
+    pool4 = MaxPooling2D(name='d_pool4')(conv4)
+    
+    conv5 = Conv2D(256, 3, padding='same', use_bias=False, name='d_conv_5')(pool4)
+    conv5 = BatchNormalization(momentum=0.8, name='d_bn_4')(conv5)
+    conv5 = LeakyReLU(alpha=0.1, name='d_relu_5')(conv5)
+    
+    upscale1 = UpSampling2D(interpolation='bilinear')(conv5)
+    conv6 = Conv2DTranspose(128, 3, padding='same', use_bias=False)(upscale1)
     conv6 = BatchNormalization()(conv6)
     conv6 = LeakyReLU(alpha=0.1)(conv6)
-    fuse2 = Add()([conv6, conv2])
-    upscale3 = UpSampling2D()(fuse2)
-    conv7 = Conv2DTranspose(8, 5, padding='same', use_bias=False)(upscale3)
+    fuse1 = Add()([conv6, conv4])
+    
+    upscale2 = UpSampling2D(size=4, interpolation='bilinear')(fuse1)
+    conv7 = Conv2DTranspose(32, 3, padding='same', use_bias=False)(upscale2)
     conv7 = BatchNormalization()(conv7)
     conv7 = LeakyReLU(alpha=0.1)(conv7)
-    final_score = Conv2D(1, 1, activation='sigmoid', padding='same')(conv7)
+    
+    upscale3 = UpSampling2D(interpolation='bilinear')(conv7)
+    conv8 = Conv2DTranspose(16, 5, padding='same', use_bias=False)(upscale3)
+    conv8 = BatchNormalization()(conv8)
+    conv8 = LeakyReLU(alpha=0.1)(conv8)
+    fuse2 = Add()([conv8, conv1])
+    
+    final_score = Conv2D(1, 1, activation='sigmoid', padding='same')(fuse2)
 
-    self.model = Model(inputs=image, outputs=final_score)
+    self.model = Model(image, final_score)
     self.model.compile(optimizer='adam', loss='binary_crossentropy', metrics=['mse', 'accuracy'])
 
   def predict(self, image):
