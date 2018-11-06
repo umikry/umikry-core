@@ -73,9 +73,9 @@ def downloadOpenImagesData(base_dir=''):
                                   float(box_y_start), float(box_y_end)))
 
     distinct_image_ids = set([meta_data[0] for meta_data in image_meta_data])
-    with open(os.path.join(meta_dir, 'validation-images-with-rotation.csv'), 'r') as lines:
+    with open(os.path.join(meta_dir, 'validation-images-with-rotation.csv'), 'r', encoding='utf8') as lines:
       summary = {
-        'total_images': len(open(os.path.join(meta_dir, 'validation-images-with-rotation.csv')).readlines()),
+        'total_images': len(open(os.path.join(meta_dir, 'validation-images-with-rotation.csv'), encoding='utf8').readlines()),
         'images_in_classlist': 0,
         'not_available': 0
       }
