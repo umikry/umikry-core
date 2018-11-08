@@ -9,7 +9,7 @@ detect, generate and replace faces by different algorithms
 git clone https://github.com/umikry/umikry-core.git
 cd umikry-core
 pip(3) install -r requirements.txt
-``
+```
 
 ## Usage
 
