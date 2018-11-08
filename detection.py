@@ -11,6 +11,7 @@ import sys
 import math
 import time
 import cv2
+import matplotlib.pyplot as plt
 
 
 def generateTrainTestSet(data_location, datasets, test_size=0.1, override=True):
@@ -137,6 +138,24 @@ class UmikryFaceDetector():
       self.model.load_weights(pretrained_weights)
     elif encoder_weights is not None:
       self.model.load_weights(encoder_weights, by_name=True)
+    
+  def haar_face_detection(self, img, haar_classifier, scale_factor=1.1, min_neighbors=3, debug=False):
+    # img = cv2.imread('./data/OpenImages/images/{0}.jpg'.format(img), cv2.IMREAD_GRAYSCALE)
+    faces = haar_classifier.detectMultiScale(img)
+    faces_dict = {}
+    if debug:
+        plt.figure()
+        plt.imshow(img, cmap="gray")
+    if len(faces) > 0:
+        for i, (x, y, w, h) in enumerate(faces):
+            faces_dict[i] = [x, y, x+w, y+h]
+            if debug:
+                cv2.rectangle(img, (x, y), (x+w, y+h), (0, 255, 0), 2)
+                plt.figure()
+                plt.imshow(img, cmap="gray")
+        return faces_dict
+    else:
+        return None
 
   def build(self):
     image = Input(shape=(None, None, 3))
