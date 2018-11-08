@@ -1,24 +1,30 @@
 # umikry-core
 
-umikry-core ships the detector, generator, data and feature_extractor methods to
+umikry-core ships the detector, generator, data_loader and feature_extractor methods to
 detect, generate and replace faces by different algorithms
 
 ## Setup
 
+```zsh
 git clone https://github.com/umikry/umikry-core.git
 cd umikry-core
 pip(3) install -r requirements.txt
+``
 
 ## Usage
 
 ```python
 from detection import UmikryFaceDetector
 
+# use a simple and fast haar classifier 
+# (output: bounding box)
+
 umikryFaceDetector = UmikryFaceDetector(method='haar')
 image = cv2.imread('/path/to/my/image.jpg')
 faces = umikryFaceDetector.detect(image)
 
-# or even with method cnn
+# or even a more sophisticated convnet method 
+# (output: semantic segmentation)
 
 config = configparser.ConfigParser()
 config.read('umikry.ini')
