@@ -6,6 +6,8 @@ import requests
 import cv2
 import configparser
 import numpy as np
+import re
+from google_drive_downloader import GoogleDriveDownloader as gdd
 
 
 def download_coco_data(base_dir=''):
@@ -21,6 +23,44 @@ def download_coco_data(base_dir=''):
         print('Please remove the existing coco folder to proceed!')
 
     # TODO: Extract humans/people/faces/eyes/ ... etc like OpenImages dataset
+
+
+def printIfVerbose(message, verbose):
+    if verbose:
+        print(message)
+
+
+def downloadWIDERFaceDataset(base_dir='', verbose=True):
+    acknowledgement = """WIDER FACE
+    A Face Detection Benchmark
+    Multimedia Laboratory, Department of Information Engineering,
+    The Chinese University of Hong Kong
+
+    http://mmlab.ie.cuhk.edu.hk/projects/WIDERFace/"""
+    printIfVerbose('Note: {}'.format(acknowledgement), verbose)
+
+    data_dir = os.path.join(base_dir, 'WIDERFace')
+    if not os.path.isdir(data_dir):
+        os.makedirs(data_dir)
+
+    printIfVerbose('The download of WIDERFace might take a while (~ 10 min @ 32 Mbit/s)', verbose)
+    if not os.path.exists(os.path.join(base_dir, 'WIDERFace', 'Caltech_WebFaces_train.zip')):
+        gdd.download_file_from_google_drive(file_id='0B6eKvaijfFUDQUUwd21EckhUbWs',
+                                            dest_path=os.path.join(base_dir, 'WIDERFace', 'Caltech_WebFaces_train.zip'),
+                                            unzip=False)
+    else:
+        printIfVerbose('Skip download because Caltech_WebFaces_train.zip still exists', verbose)
+
+    with zipfile.ZipFile(os.path.join(base_dir, 'WIDERFace', 'Caltech_WebFaces_train.zip'), 'r') as archive:
+        archive.extractall(data_dir)
+
+    os.remove(os.path.join(base_dir, 'WIDERFace', 'Caltech_WebFaces_train.zip'))
+
+    annotations_url = 'http://mmlab.ie.cuhk.edu.hk/projects/WIDERFace/support/bbx_annotation/wider_face_split.zip'
+    wget.download(annotations_url, os.path.join(base_dir, 'WIDERFace', 'wider_face_split.zip'))
+
+    with zipfile.ZipFile(os.path.join(base_dir, 'WIDERFace', 'wider_face_split.zip'), 'r') as archive:
+        archive.extractall(os.path.join(base_dir, 'WIDERFace'))
 
 
 def download_open_images_data(base_dir=''):
@@ -171,4 +211,5 @@ if __name__ == '__main__':
         with open('umikry.ini', 'w') as configfile:
             config.write(configfile)
     # download_coco_data()
-    download_open_images_data(base_dir=data_dir)
+    # download_open_images_data(base_dir=data_dir)
+    downloadWIDERFaceDataset(base_dir=data_dir)
