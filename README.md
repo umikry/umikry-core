@@ -38,7 +38,7 @@ else:
 
 umikryFaceDetector = UmikryFaceDetector(method='cnn')
 
-generateTrainTestSet(data_dir, datasets=['OpenImages'])
+generate_train_test_set(data_dir, datasets=['OpenImages'])
 
 train_sequence = ImageSequence(data_dir, batch_size=16, patch_size=(384, 384), is_training=True)
 test_sequence = ImageSequence(data_dir, batch_size=16, patch_size=(384, 384))
