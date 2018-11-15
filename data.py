@@ -6,6 +6,7 @@ import requests
 import cv2
 import configparser
 import numpy as np
+import shutil
 from google_drive_downloader import GoogleDriveDownloader as gdd
 
 
@@ -13,10 +14,13 @@ class UmikryDataPioneer(object):
     def __init__(self, base_dir):
         self.base_dir = base_dir
 
-    def prepareWIDERFaceForHaarTraining(self):
+    def prepareWIDERFaceForHaarTraining(self, override=False):
         data_dir = os.path.join(self.base_dir, 'WIDERFace')
         if os.path.isdir(data_dir):
             train_dir = os.path.join(self.base_dir, 'WIDERFace_Haar')
+            if override and os.path.isdir(train_dir):
+                shutil.rmtree(train_dir)
+
             if not os.path.isdir(train_dir):
                 positive_dir = os.path.join(train_dir, 'positives')
                 os.makedirs(positive_dir)
@@ -26,17 +30,19 @@ class UmikryDataPioneer(object):
                     image = None
                     boundingBoxes = 0
                     for line in lines:
-                        if line.endswith('jpg'):
-                            filename = os.path.join(line.split('/'))
-                            image = cv2.imread(os.path.join(data_dir, filename))
+                        if line[:-1].endswith('jpg'):
+                            filename = line[:-1]
+                            image = cv2.imread(os.path.join(data_dir, 'WIDER_train', 'images', filename))
                         elif boundingBoxes < 1:
-                            boundingBoxes = int(line)
+                            boundingBoxes = int(line[:-1])
                         else:
-                            x, y, w, h = line.split(' ')[:4]
+                            x, y, w, h, blur, _, illumination, invalid, occlusion, _ = line[:-2].split(' ')
                             if image is not None:
-                                cv2.imwrite(os.join(positive_dir, str(boundingBoxes) + '_' + filename),
-                                            image[y:y + h, x:x + w])
-                                boundingBoxes = boundingBoxes - 1
+                                if int(w) > 50 and int(h) > 50 and blur == '0' and illumination == '0' and invalid == '0' and occlusion == '0':
+                                    save_path = os.path.join(positive_dir, str(boundingBoxes) + '_' + filename.split('/')[1])
+                                    cv2.imwrite(save_path,
+                                                image[int(y):int(y) + int(h), int(x):int(x) + int(w)])
+                            boundingBoxes = boundingBoxes - 1
 
             else:
                 print('Skip haar training set generation: {} already exists!'.format(train_dir))
@@ -47,8 +53,9 @@ class UmikryDataPioneer(object):
 class UmikryDataCollector(object):
     def __init__(self, base_dir, verbose=False):
         self.base_dir = base_dir
+        self.verbose = verbose
 
-    def info(self, message):
+    def __info(self, message):
         if self.verbose:
             print(message)
 
@@ -63,7 +70,7 @@ class UmikryDataCollector(object):
 
             os.unlink(os.path.join(data_dir, 'val2017.zip'))
         else:
-            self.info('Please remove the existing coco folder to proceed!')
+            self.__info('Please remove the existing coco folder to proceed!')
 
     def downloadWIDERFaceDataset(self):
         acknowledgement = """WIDER FACE
@@ -72,30 +79,32 @@ class UmikryDataCollector(object):
         The Chinese University of Hong Kong
 
         http://mmlab.ie.cuhk.edu.hk/projects/WIDERFace/"""
-        self.info('Note: {}'.format(acknowledgement))
+        self.__info('Note: {}'.format(acknowledgement))
 
         data_dir = os.path.join(self.base_dir, 'WIDERFace')
         if not os.path.isdir(data_dir):
             os.makedirs(data_dir)
 
-        self.info('The download of WIDERFace might take a while (~ 10 min @ 32 Mbit/s)')
-        if not os.path.exists(os.path.join(data_dir, 'Caltech_WebFaces_train.zip')):
-            gdd.download_file_from_google_drive(file_id='0B6eKvaijfFUDQUUwd21EckhUbWs',
-                                                dest_path=os.path.join(data_dir, 'Caltech_WebFaces_train.zip'),
-                                                unzip=False)
+            self.__info('The download of WIDERFace might take a while (~ 10 min @ 32 Mbit/s)')
+            if not os.path.exists(os.path.join(data_dir, 'Caltech_WebFaces_train.zip')):
+                gdd.download_file_from_google_drive(file_id='0B6eKvaijfFUDQUUwd21EckhUbWs',
+                                                    dest_path=os.path.join(data_dir, 'Caltech_WebFaces_train.zip'),
+                                                    unzip=False)
+            else:
+                self.__info('Skip download because Caltech_WebFaces_train.zip still exists')
+
+            with zipfile.ZipFile(os.path.join(data_dir, 'Caltech_WebFaces_train.zip'), 'r') as archive:
+                archive.extractall(data_dir)
+
+            os.remove(os.path.join(data_dir, 'Caltech_WebFaces_train.zip'))
+
+            annotations_url = 'http://mmlab.ie.cuhk.edu.hk/projects/WIDERFace/support/bbx_annotation/wider_face_split.zip'
+            wget.download(annotations_url, os.path.join(data_dir, 'wider_face_split.zip'))
+
+            with zipfile.ZipFile(os.path.join(data_dir, 'wider_face_split.zip'), 'r') as archive:
+                archive.extractall(os.path.join(data_dir))
         else:
-            self.info('Skip download because Caltech_WebFaces_train.zip still exists')
-
-        with zipfile.ZipFile(os.path.join(data_dir, 'Caltech_WebFaces_train.zip'), 'r') as archive:
-            archive.extractall(data_dir)
-
-        os.remove(os.path.join(data_dir, 'Caltech_WebFaces_train.zip'))
-
-        annotations_url = 'http://mmlab.ie.cuhk.edu.hk/projects/WIDERFace/support/bbx_annotation/wider_face_split.zip'
-        wget.download(annotations_url, os.path.join(data_dir, 'wider_face_split.zip'))
-
-        with zipfile.ZipFile(os.path.join(data_dir, 'wider_face_split.zip'), 'r') as archive:
-            archive.extractall(os.path.join(data_dir))
+            self.__info('Skip WIDERFace download: {} already exists!'.format(data_dir))
 
     def download_open_images_data(self):
         data_dir = os.path.join(self.base_dir, 'OpenImages')
@@ -222,7 +231,7 @@ class UmikryDataCollector(object):
             sys.stdout.write("\r")
             sys.stdout.write("\033[K")
             sys.stdout.flush()
-            self.info(('{} pictures were downloaded. {} OpenImages (val) total,'
+            self.__info(('{} pictures were downloaded. {} OpenImages (val) total,'
                        '{} in class list and {} are not available anymore').format(
                 summary['images_in_classlist'] - summary['not_available'],
                 summary['total_images'], summary['images_in_classlist'],
@@ -244,4 +253,6 @@ if __name__ == '__main__':
             config.write(configfile)
 
     umikryDataCollector = UmikryDataCollector(base_dir=data_dir, verbose=True)
+    umikryDataPioneer = UmikryDataPioneer(base_dir=data_dir)
     umikryDataCollector.downloadWIDERFaceDataset()
+    umikryDataPioneer.prepareWIDERFaceForHaarTraining(override=True)
