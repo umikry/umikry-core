@@ -23,16 +23,22 @@ class UmikryDataPioneer(object):
 
             if not os.path.isdir(train_dir):
                 positive_dir = os.path.join(train_dir, 'positives')
+                negatives_dir = os.path.join(train_dir, 'negatives')
                 os.makedirs(positive_dir)
+                os.mkdir(negatives_dir)
                 label_file = os.path.join(data_dir, 'wider_face_split', 'wider_face_train_bbx_gt.txt')
                 with open(label_file, 'r') as lines:
                     filename = None
                     image = None
+                    face_removed_image = None
                     boundingBoxes = 0
                     for line in lines:
                         if line[:-1].endswith('jpg'):
+                            if face_removed_image is not None:
+                                cv2.imwrite(os.path.join(negatives_dir, filename.split('/')[1]), face_removed_image)
                             filename = line[:-1]
                             image = cv2.imread(os.path.join(data_dir, 'WIDER_train', 'images', filename))
+                            face_removed_image = image.copy()
                         elif boundingBoxes < 1:
                             boundingBoxes = int(line[:-1])
                         else:
@@ -42,6 +48,7 @@ class UmikryDataPioneer(object):
                                     save_path = os.path.join(positive_dir, str(boundingBoxes) + '_' + filename.split('/')[1])
                                     cv2.imwrite(save_path,
                                                 image[int(y):int(y) + int(h), int(x):int(x) + int(w)])
+                                face_removed_image[int(y):int(y) + int(h), int(x):int(x) + int(w)] = 0
                             boundingBoxes = boundingBoxes - 1
 
             else:
