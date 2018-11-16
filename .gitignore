@@ -9,5 +9,7 @@ umikry.ini
 nohup.out
 models/community_facedetector_weights.*.h5
 models/haarcascade_frontalface_default.xml
+models/res10_300x300_ssd_iter_140000_fp16.caffemodel
+models/deploy.prototxt
 gan_output
 data

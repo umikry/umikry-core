@@ -153,7 +153,7 @@ class UmikryFaceDetector(object):
             if not os.path.isfile(caffe_model_path):
                 caffe_model_url = 'https://github.com/opencv/opencv_3rdparty/raw/19512576c112aa2c7b6328cb0e8d589a4a90a26d/res10_300x300_ssd_iter_140000_fp16.caffemodel'
                 wget.download(caffe_model_url, caffe_model_path)
-            if not os.path.isfile(caffe_model_path):
+            if not os.path.isfile(caffe_config_path):
                 caffe_config_url = 'https://raw.githubusercontent.com/opencv/opencv/master/samples/dnn/face_detector/deploy.prototxt'
                 wget.download(caffe_config_url, caffe_config_path)
             self.caffe_classifier = cv2.dnn.readNetFromCaffe(caffe_config_path, caffe_model_path)
