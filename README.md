@@ -2,6 +2,8 @@
 
 umikry-core ships different detection, transformation and data generation methods to detect, generate and replace faces
 
+![image](https://user-images.githubusercontent.com/1525818/48665133-a0073680-eaa9-11e8-805c-871e4476adb0.png)
+
 ## Setup
 
 ```zsh
