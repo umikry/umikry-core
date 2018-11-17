@@ -225,14 +225,13 @@ class UmikryFaceDetector(object):
     def __caffe_detection(self, image):
         (h, w) = image.shape[:2]
 
-        blob = cv2.dnn.blobFromImage(cv2.resize(image, (300, 300)), 1.0, (300, 300), [104, 117, 123], False, False)
+        blob = cv2.dnn.blobFromImage(image, 0.4, (w, h), [104, 117, 123], False, False)
         self.caffe_classifier.setInput(blob)
         faces = self.caffe_classifier.forward()
-
-        if np.any(faces[0, 0, :, 2] > 0.5): # threshold
+        if np.any(faces[0, 0, :, 2] > 0.4):  # threshold
             faces_dict = {}
             for i in range(0, faces.shape[2]):
-                if faces[0, 0, i, 2] > 0.5: # faces[0, 0, i, 2] --> confidence of net
+                if faces[0, 0, i, 2] > 0.4:  # faces[0, 0, i, 2] --> confidence of net
                     box = faces[0, 0, i, 3:7] * np.array([w, h, w, h])
                     x, y, x_w, y_h = box.astype("int")
                     faces_dict[i] = [x, y, x_w, y_h]
@@ -250,12 +249,22 @@ class UmikryFaceDetector(object):
             image = np.float32(image / 255.0)
             prediction = self.model.predict(np.array([image]))[0]
             prediction = prediction[border[0]:(prediction.shape[0] - border[1]),
-                         border[2]:(prediction.shape[1] - border[3]), :]
+                                    border[2]:(prediction.shape[1] - border[3]), :]
             return prediction.reshape(prediction.shape[0], prediction.shape[1])
 
+    def __haar_train(self, train_folder):
+        if (not os.path.isdir(os.path.join(train_folder, 'positives')) or
+                not os.path.isdir(os.path.join(train_folder, 'negatives'))):
+            print('train_folder needs to include positives and negatives subfolders')
+            print('Hint: Use UmikryDataPioneer to generate train data')
+        else:
+            raise NotImplementedError
+
     def train(self, train_generator, epochs=10, steps_per_epoch=None, test_generator=None,
-              validation_steps=None, callbacks=None):
+              validation_steps=None, callbacks=None, train_folder=None):
         if self.method == 'haar':
+            self.__haar_train(train_folder)
+        if self.method == 'caffe':
             raise NotImplementedError
         elif self.method == 'cnn':
             self.model.fit_generator(train_generator, epochs=epochs, steps_per_epoch=steps_per_epoch,
