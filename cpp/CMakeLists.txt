@@ -7,4 +7,6 @@
  conan_basic_setup()
 
  add_executable(umikry umikry.cpp)
- target_link_libraries(umikry ${CONAN_LIBS})
+ add_library(UmikryFaceDetector UmikryFaceDetector.cpp)
+
+ target_link_libraries(umikry ${CONAN_LIBS} UmikryFaceDetector)

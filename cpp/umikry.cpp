@@ -1,6 +1,8 @@
-#include <stdio.h>
+#include <iostream>
 #include <opencv2/opencv.hpp>
 #include <string>
+
+#include "UmikryFaceDetector.hpp"
 
 using namespace std;
 using namespace cv;
@@ -46,22 +48,21 @@ int main(int argc, const char** argv) {
     }
 
     if (!source.empty() && !destination.empty()) {
-    	Mat image;
-    	image = imread(source);
+        Mat image = imread(source);
 
-    	if (!image.data) {
-		  cout << "The image '" << source << "' is not readable." << endl;
-		  return 1;
-		}
+        if (!image.data) {
+          cout << "The image '" << source << "' is not readable." << endl;
+          return 1;
+        }
 
-		// TODO: Implement umikry core components 
-		cout << "umikry-core (C++) is not implement yet. " 
-			 << "For now it just copies the source to destination." << endl;
+        UmikryFaceDetector umikryFaceDetector = UmikryFaceDetector(DetectionMethod::CAFFE);
+        map<int, vector<int>> faces = umikryFaceDetector.detect(image);
 
-		imwrite(destination, image);
-		return 0;
+        cout << "Found " << faces.size() << " faces." << endl;
+
+        return 0;
     } else {
-    	cerr << "Please specify a source image and a destination." << endl;
+        cerr << "Please specify a source image and a destination." << endl;
         return 1;
     }
 }
