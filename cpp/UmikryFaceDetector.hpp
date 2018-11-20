@@ -3,22 +3,25 @@
 
 #include <vector>
 #include <map>
-#include <opencv2/opencv.hpp>
+#include <iostream>
+#include <opencv2/core.hpp>
+#include <opencv2/dnn.hpp>
 
 enum class DetectionMethod { HAAR, CAFFE };
 
 class UmikryFaceDetector {
     public:
-        UmikryFaceDetector(DetectionMethod detection_method);
+        UmikryFaceDetector(DetectionMethod detection_method, std::string model_path);
         ~UmikryFaceDetector() {};
 
-        std::map<int, std::vector<int>> detect(cv::Mat image);
+        std::vector<cv::Rect> detect(cv::Mat image);
 
     private:
-        std::map<int, std::vector<int>> haar_detection(cv::Mat image);
-        std::map<int, std::vector<int>> caffe_detection(cv::Mat image);
+        std::vector<cv::Rect> haar_detection(cv::Mat image);
+        std::vector<cv::Rect> caffe_detection(cv::Mat image);
 
-        DetectionMethod m_detection_method;
+        DetectionMethod detection_method;
+        std::string model_path;
 };
 
 #endif

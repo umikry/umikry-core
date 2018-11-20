@@ -2,13 +2,15 @@
 
 This is the C++ umikry-core implementation to support the integation to other languages and applications.
 
+## Prerequisites
+
+OpenCV (>=3.4)
+
 ## Setup
 
 ```zsh
-pip(3) install conan
 cd build
-conan install ..
-cmake .. -G "Unix Makefiles" -DCMAKE_BUILD_TYPE=Release
-cmake --build .
-./bin/umikry -s "/Users/fabianbormann/test.jpg" -d "/Users/fabianbormann/test_out.jpg"
+cmake ..
+make
+./umikry --source /home/whoami/test.jpg --destination test.jpg --models ../../models
 ```
