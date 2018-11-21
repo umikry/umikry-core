@@ -8,5 +8,6 @@ include_directories( ${OpenCV_INCLUDE_DIRS} )
 
 add_executable(umikry umikry.cpp)
 add_library(UmikryFaceDetector UmikryFaceDetector.cpp)
+add_library(UmikryFaceTransformator UmikryFaceTransformator.cpp)
 
-target_link_libraries(umikry ${OpenCV_LIBS} UmikryFaceDetector)
+target_link_libraries(umikry ${OpenCV_LIBS} UmikryFaceDetector UmikryFaceTransformator)
