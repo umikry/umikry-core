@@ -1,5 +1,5 @@
-from detection import UmikryFaceDetector
-from transformation import UmikryFaceTransformator
+from UmikryFaceDetector import UmikryFaceDetector
+from UmikryFaceTransformator import UmikryFaceTransformator
 
 
 def umikry(image, detection='CAFFE', transformation='GAN'):

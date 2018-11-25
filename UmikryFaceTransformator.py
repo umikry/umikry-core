@@ -2,7 +2,7 @@ import cv2
 import numpy as np
 import math
 import os
-from DCGAN import build_generator
+from UmikryDCGAN import build_generator
 from keras.models import Model
 from keras.layers import Input, Conv2D, Conv2DTranspose, MaxPooling2D
 
