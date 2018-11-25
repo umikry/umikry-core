@@ -1,9 +1,7 @@
 from keras.models import Model
 from keras.layers import Input, Conv2D, MaxPooling2D, UpSampling2D, Add, BatchNormalization, LeakyReLU, Conv2DTranspose
-from keras.callbacks import ModelCheckpoint, EarlyStopping
 from keras.utils import Sequence
 import numpy as np
-import configparser
 import os
 import random
 import sys
@@ -131,23 +129,23 @@ class ImageSequence(Sequence):
 
 
 class UmikryFaceDetector(object):
-    def __init__(self, method='haar', pretrained_weights=None, encoder_weights=None):
+    def __init__(self, method='HAAR', pretrained_weights=None, encoder_weights=None):
         self.method = method
 
-        if self.method == 'cnn':
+        if self.method == 'CNN':
             self.__build()
             if pretrained_weights is not None:
                 self.model.load_weights(pretrained_weights)
             elif encoder_weights is not None:
                 self.model.load_weights(encoder_weights, by_name=True)
-        elif self.method == 'haar':
+        elif self.method == 'HAAR':
             haar_classifier_path = os.path.join('models', 'haarcascade_frontalface_default.xml')
             if not os.path.isfile(haar_classifier_path):
                 haar_classifier_url = 'https://github.com/opencv/opencv/raw/master/data/haarcascades/haarcascade_frontalface_default.xml'
                 wget.download(haar_classifier_url, haar_classifier_path)
 
             self.haar_classifier = cv2.CascadeClassifier(haar_classifier_path)
-        elif self.method == 'caffe':
+        elif self.method == 'CAFFE':
             caffe_model_path = os.path.join('models', 'res10_300x300_ssd_iter_140000_fp16.caffemodel')
             caffe_config_path = os.path.join('models', 'deploy.prototxt')
             if not os.path.isfile(caffe_model_path):
@@ -159,7 +157,7 @@ class UmikryFaceDetector(object):
             self.caffe_classifier = cv2.dnn.readNetFromCaffe(caffe_config_path, caffe_model_path)
 
         else:
-            raise ValueError('{} is an invalid method use \'cnn\' or \'haar\' instead'.format(self.method))
+            raise ValueError('{} is an invalid method use \'CNN\', \'CAFFE\' or \'HAAR\' instead'.format(self.method))
 
     def __build(self):
         image = Input(shape=(None, None, 3))
@@ -240,11 +238,11 @@ class UmikryFaceDetector(object):
             return None
 
     def detect(self, image, scale_factor=1.1, min_neighbors=3):
-        if self.method == 'haar':
+        if self.method == 'HAAR':
             return self.__haar_detection(image)
-        elif self.method == 'caffe':
+        elif self.method == 'CAFFE':
             return self.__caffe_detection(image)
-        elif self.method == 'cnn':
+        elif self.method == 'CNN':
             image, border = pad_to_next_multiply_of_n(image[0], 8)
             image = np.float32(image / 255.0)
             prediction = self.model.predict(np.array([image]))[0]
@@ -262,11 +260,11 @@ class UmikryFaceDetector(object):
 
     def train(self, train_generator, epochs=10, steps_per_epoch=None, test_generator=None,
               validation_steps=None, callbacks=None, train_folder=None):
-        if self.method == 'haar':
+        if self.method == 'HAAR':
             self.__haar_train(train_folder)
-        if self.method == 'caffe':
+        if self.method == 'CAFFE':
             raise NotImplementedError
-        elif self.method == 'cnn':
+        elif self.method == 'CNN':
             self.model.fit_generator(train_generator, epochs=epochs, steps_per_epoch=steps_per_epoch,
                                      validation_data=test_generator, validation_steps=validation_steps,
                                      use_multiprocessing=True, workers=2, callbacks=callbacks)

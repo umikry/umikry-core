@@ -2,7 +2,7 @@ from detection import UmikryFaceDetector
 from transformation import UmikryFaceTransformator
 
 
-def umikry(image, detection='caffe', transformation='blur'):
+def umikry(image, detection='CAFFE', transformation='GAN'):
     umikryFaceDetector = UmikryFaceDetector(method=detection)
     umikryFaceTransformator = UmikryFaceTransformator(method=transformation)
 
