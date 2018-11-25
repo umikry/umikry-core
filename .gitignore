@@ -11,5 +11,9 @@ models/community_facedetector_weights.*.h5
 models/haarcascade_frontalface_default.xml
 models/res10_300x300_ssd_iter_140000_fp16.caffemodel
 models/deploy.prototxt
+models/dlib_face_recognition_resnet_model_v1.dat
+models/shape_predictor_68_face_landmarks.dat
+models/shape_predictor_5_face_landmarks.dat
 gan_output
 data
+test_script.py
