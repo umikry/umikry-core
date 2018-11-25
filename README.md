@@ -2,7 +2,7 @@
 
 umikry-core ships different detection, transformation and data generation methods to detect, generate and replace faces
 
-![image](https://user-images.githubusercontent.com/1525818/48665133-a0073680-eaa9-11e8-805c-871e4476adb0.png)
+![image](https://user-images.githubusercontent.com/1525818/48979609-1c0f0900-f0be-11e8-9f1b-f7e0c493ea66.png)
 
 ## Setup
 
@@ -23,16 +23,21 @@ print('photo (public domain) downloaded from https://www.flickr.com/photos/presi
 image = cv2.imread('/home/whoami/photo.jpg')
 b,g,r = cv2.split(image)
 
-plt.figure(figsize=(16, 16))
-plt.subplot(121)
-plt.imshow(cv2.merge([r,g,b]))
-plt.axis('off')
+fig, axis = plt.subplots(2, 2)
+fig.set_figheight(10)
+fig.set_figwidth(15)
+axis[0, 0].imshow(cv2.merge([r,g,b]))
+axis[0, 0].axis('off')
+axis[0, 0].set_title('ORIGINAL')
 
-image = umikry(image, detection='caffe', transformation='blur')
-b,g,r = cv2.split(image)
+methods = [([0, 1], 'GAN'), ([1, 0], 'AUTOENCODER'), ([1, 1], 'BLUR')]
 
-plt.subplot(122)
-plt.imshow(cv2.merge([r,g,b]))
-plt.axis('off')
+for position, method in methods:    
+    b,g,r = cv2.split(umikry(image, detection='CAFFE', transformation=method))
+
+    axis[position[0], position[1]].imshow(cv2.merge([r,g,b]))
+    axis[position[0], position[1]].axis('off')
+    axis[position[0], position[1]].set_title(method)
+
 plt.show()
 ```
