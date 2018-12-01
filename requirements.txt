@@ -5,3 +5,5 @@ requests>=2.20.0
 opencv-python>=3.4.3.18
 numpy>=1.14.2
 googledrivedownloader>=0.3
+keras>=2.2.4
+tensorflow>=1.12.0
