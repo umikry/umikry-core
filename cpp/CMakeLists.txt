@@ -2,7 +2,7 @@ cmake_minimum_required(VERSION 2.8.12)
 project(umikry)
 
 find_package(pybind11 REQUIRED)
-find_package( OpenCV REQUIRED COMPONENTS core highgui imgproc dnn )
+find_package( OpenCV REQUIRED COMPONENTS core highgui imgproc dnn imgcodecs )
 
 add_definitions("-std=c++11")
 

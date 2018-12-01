@@ -67,6 +67,8 @@ int main(int argc, const char** argv) {
           return 1;
         }
 
+        std::cout << image.dims << " " << image.size() << " " << image.rows << " " << image.cols << " " << image.channels() << std::endl; 
+
         UmikryFaceDetector umikryFaceDetector = UmikryFaceDetector(DetectionMethod::CAFFE, model_path);
         
         std::chrono::steady_clock::time_point start = std::chrono::steady_clock::now();
