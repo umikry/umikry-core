@@ -1,6 +1,7 @@
 # umikry-core
 
-umikry-core ships different detection, transformation and data generation methods to detect, generate and replace faces
+umikry-core ships different detection, transformation and data generation methods to detect, generate and replace faces.
+It also allows you to recognize familiar persons to let them unaffected (see [umikry examples](https://github.com/umikry/example_applications) for more information)
 
 ![image](https://user-images.githubusercontent.com/1525818/48979609-1c0f0900-f0be-11e8-9f1b-f7e0c493ea66.png)
 
