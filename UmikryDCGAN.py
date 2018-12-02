@@ -5,7 +5,7 @@ import random
 import matplotlib.pyplot as plt
 from keras.models import Model, Sequential
 from keras.layers import Input, LeakyReLU, Conv2D, Dropout, Conv2DTranspose, MaxPooling2D
-from keras.layers import Flatten, BatchNormalization, Dense, Activation
+from keras.layers import GlobalAveragePooling2D, BatchNormalization, Dense, Activation
 from keras.optimizers import Adam
 import configparser
 
@@ -75,7 +75,7 @@ def build_discriminator(image_shape, dropout_rate):
     model.add(MaxPooling2D(name='d_pool5'))
     model.add(Dropout(dropout_rate))
 
-    model.add(Flatten(name='d_flatten'))
+    model.add(GlobalAveragePooling2D(name='d_flatten'))
     model.add(Dense(1, activation='sigmoid', name='d_score'))
 
     image = Input(shape=image_shape, name='d_input')

@@ -10,7 +10,7 @@ import shutil
 from google_drive_downloader import GoogleDriveDownloader as gdd
 
 
-class UmikryDataPioneer(object):
+class UmikryDataPioneer():
     def __init__(self, base_dir):
         self.base_dir = base_dir
 

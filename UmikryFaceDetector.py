@@ -131,6 +131,7 @@ class ImageSequence(Sequence):
 class UmikryFaceDetector(object):
     def __init__(self, method='HAAR', pretrained_weights=None, encoder_weights=None):
         self.method = method
+        root_dir = os.path.dirname(os.path.realpath(__file__))
 
         if self.method == 'CNN':
             self.__build()
@@ -139,15 +140,15 @@ class UmikryFaceDetector(object):
             elif encoder_weights is not None:
                 self.model.load_weights(encoder_weights, by_name=True)
         elif self.method == 'HAAR':
-            haar_classifier_path = os.path.join('models', 'haarcascade_frontalface_default.xml')
+            haar_classifier_path = os.path.join(root_dir, 'models', 'haarcascade_frontalface_default.xml')
             if not os.path.isfile(haar_classifier_path):
                 haar_classifier_url = 'https://github.com/opencv/opencv/raw/master/data/haarcascades/haarcascade_frontalface_default.xml'
                 wget.download(haar_classifier_url, haar_classifier_path)
 
             self.haar_classifier = cv2.CascadeClassifier(haar_classifier_path)
         elif self.method == 'CAFFE':
-            caffe_model_path = os.path.join('models', 'res10_300x300_ssd_iter_140000_fp16.caffemodel')
-            caffe_config_path = os.path.join('models', 'deploy.prototxt')
+            caffe_model_path = os.path.join(root_dir, 'models', 'res10_300x300_ssd_iter_140000_fp16.caffemodel')
+            caffe_config_path = os.path.join(root_dir, 'models', 'deploy.prototxt')
             if not os.path.isfile(caffe_model_path):
                 caffe_model_url = 'https://github.com/opencv/opencv_3rdparty/raw/19512576c112aa2c7b6328cb0e8d589a4a90a26d/res10_300x300_ssd_iter_140000_fp16.caffemodel'
                 wget.download(caffe_model_url, caffe_model_path)
