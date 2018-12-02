@@ -82,9 +82,14 @@ setup(
     version=__version__,
     author='umikry.org',
     author_email='info@umikry.org',
+    license='AGPL-3',
     url='https://github.com/umikry/umikry-core',
     description='umikry provides detection, generation, data loading and feature extraction methods,',
     ext_modules=[CMakeExtension('cmake_example')],
     cmdclass=dict(build_ext=CMakeBuild),
     zip_safe=False,
+    classifiers=[
+        "License :: OSI Approved :: AGPL-3",
+        "Operating System :: OS Independent",
+    ],
 )

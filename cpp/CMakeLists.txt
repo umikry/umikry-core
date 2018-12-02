@@ -3,6 +3,7 @@ project(umikry)
 
 find_package(pybind11 REQUIRED)
 find_package( OpenCV REQUIRED COMPONENTS core highgui imgproc dnn imgcodecs )
+find_package( CURL REQUIRED ) 
 
 add_definitions("-std=c++11")
 
@@ -14,5 +15,5 @@ pybind11_add_module(umikry python_bindings.cpp)
 add_library(UmikryFaceDetector UmikryFaceDetector.cpp)
 add_library(UmikryFaceTransformator UmikryFaceTransformator.cpp)
 
-target_link_libraries(umikry PRIVATE ${OpenCV_LIBS} UmikryFaceDetector UmikryFaceTransformator)
-target_link_libraries(UmikryCore ${OpenCV_LIBS} UmikryFaceDetector UmikryFaceTransformator)
+target_link_libraries(umikry PRIVATE ${OpenCV_LIBS} ${CURL_LIBRARIES} UmikryFaceDetector UmikryFaceTransformator)
+target_link_libraries(UmikryCore ${OpenCV_LIBS} ${CURL_LIBRARIES} UmikryFaceDetector UmikryFaceTransformator)

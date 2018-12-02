@@ -105,14 +105,14 @@ std::vector<cv::Rect> UmikryFaceDetector::caffe_detection(const cv::Mat& image) 
 	const std::string caffeWeightFile = model_path + "/" + PathToCaffeModel;
 	if (!fileExists(caffeWeightFile)) {
 		if (!downloadUrlAndSaveContent(CaffeModelUrl, caffeWeightFile)) {
-			throw std::exception("Could not download Caffe model weights.");
+			throw std::runtime_error("Could not download Caffe model weights.");
 		}
 	}
 
 	const std::string caffeConfigFile = model_path + "/" + PathToCaffeConfig;
 	if (!fileExists(caffeConfigFile)) {
 		if (!downloadUrlAndSaveContent(CaffeConfigUrl, caffeConfigFile)) {
-			throw std::exception("Could not download Caffe config.");
+			throw std::runtime_error("Could not download Caffe config.");
 		}
 	}
 
