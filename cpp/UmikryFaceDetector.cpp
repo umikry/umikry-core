@@ -36,21 +36,18 @@ size_t write_data(void *ptr, size_t size, size_t nmemb, FILE *stream)
 #endif
 
 #include <fstream>
-bool UmikryFaceDetector::downloadUrlAndSaveContent(const std::string & url, const std::string& targetPath)
-{
+bool UmikryFaceDetector::downloadUrlAndSaveContent(const std::string & url, const std::string& targetPath) {
 #ifdef WIN32
 	IStream* stream;
 	HRESULT result = URLOpenBlockingStream(0, url.c_str(), &stream, 0, 0);
-	if (result != 0)
-	{
+	if (result != 0) {
 		return false;
 	}
 	char buffer[DownloadChunkSize];
 	unsigned long bytesRead;
 	std::ofstream output(targetPath, std::ios_base::binary | std::ios_base::out);
 	stream->Read(buffer, DownloadChunkSize, &bytesRead);
-	while (bytesRead > 0U)
-	{
+	while (bytesRead > 0U) {
 		output.write(buffer, (long long)bytesRead);
 		stream->Read(buffer, DownloadChunkSize, &bytesRead);
 	}
@@ -62,8 +59,7 @@ bool UmikryFaceDetector::downloadUrlAndSaveContent(const std::string & url, cons
 	FILE *fp;
 	CURLcode res;
 	curl = curl_easy_init();
-	if (curl)
-	{
+	if (curl) {
 		fp = fopen(targetPath.c_str(), "wb");
 		curl_easy_setopt(curl, CURLOPT_URL, url.c_str());
 		curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, write_data);
