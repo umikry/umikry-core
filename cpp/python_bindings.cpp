@@ -28,31 +28,25 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>
 
 namespace py = pybind11;
 
-cv::Mat umikry(py::array_t<uint8_t> image, std::string model_path, DetectionMethod detectionMethod, TransformationMethod transformationMethod) {    
-    // TODO check dims
+py::array_t<uint8_t> umikry(py::array_t<uint8_t> input, const std::string &model_path, DetectionMethod detectionMethod, TransformationMethod transformationMethod) {    
+	if (input.ndim() != 3) {
+		throw std::invalid_argument("The image needs to have 3 dimensions.");
+	}
 
-    py::buffer_info buffer = image.request();
-    
-    int rows = buffer.shape[0];
-    int cols = buffer.shape[1];
-    int channels = buffer.shape[2];
-
-    if (channels != 3) {
+    if (input.shape()[2] != 3) {
         throw std::invalid_argument("The image needs to have 3 channels.");
     }
 
-    unsigned char* data = (unsigned char*) buffer.ptr;
-    cv::Mat cv_image(rows, cols, CV_8UC3, cv::Scalar::all(0));
+	cv::Mat cv_image(static_cast<int>(input.shape()[0]), static_cast<int>(input.shape()[1]), CV_8UC3);
+	memcpy(cv_image.data, input.data(), input.nbytes());
 
-    cv_image.data = data;
-    
-    UmikryFaceDetector umikryFaceDetector = UmikryFaceDetector(DetectionMethod::CAFFE, model_path);
-    UmikryFaceTransformator umikryFaceTransformator = UmikryFaceTransformator(TransformationMethod::BLUR);
- 
-    std::vector<cv::Rect> faces = umikryFaceDetector.detect(cv_image);
-    umikryFaceTransformator.transform(cv_image, faces);
-    
-    return cv_image;
+	UmikryFaceDetector umikryFaceDetector = UmikryFaceDetector(DetectionMethod::CAFFE, model_path);
+	UmikryFaceTransformator umikryFaceTransformator = UmikryFaceTransformator(TransformationMethod::BLUR);
+	umikryFaceTransformator.transform(cv_image, umikryFaceDetector.detect(cv_image));
+
+	auto result = py::array_t<uint8_t>(std::vector<ssize_t>(input.shape(), input.shape() + input.ndim()));
+	memcpy(result.mutable_data(), cv_image.data, input.nbytes());
+	return result;
 }
 
 PYBIND11_MODULE(umikry, m) {
@@ -78,7 +72,7 @@ PYBIND11_MODULE(umikry, m) {
     py::enum_<TransformationMethod>(m, "TransformationMethod")
         .value("BLUR", TransformationMethod::BLUR)
         .export_values();
-
+	/*
     py::class_<cv::Mat>(m, "Image", py::buffer_protocol())
         .def_buffer([](cv::Mat& image) -> py::buffer_info {
             return py::buffer_info(
@@ -91,7 +85,7 @@ PYBIND11_MODULE(umikry, m) {
                   sizeof(unsigned char) * image.channels(),
                   sizeof(unsigned char) }
             );
-        });
+        });*/
 
   m.attr("__version__") = "0.1.alpha";
 }
