@@ -12,10 +12,9 @@ class UmikryFaceTransformator {
         UmikryFaceTransformator(TransformationMethod transformation_method);
         ~UmikryFaceTransformator() {};
 
-        void transform(cv::Mat& image, std::vector<cv::Rect> faces);
+        void transform(cv::Mat& image, const std::vector<cv::Rect>& faces);
     private:
-        void blur_transformation(cv::Mat& image, std::vector<cv::Rect> faces);
-
+        void blur_transformation(cv::Mat& image, const std::vector<cv::Rect>& faces);
         TransformationMethod transformation_method;
 };
 
