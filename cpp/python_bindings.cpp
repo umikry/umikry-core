@@ -55,20 +55,6 @@ PYBIND11_MODULE(umikry, m) {
     py::enum_<TransformationMethod>(m, "TransformationMethod")
         .value("BLUR", TransformationMethod::BLUR)
         .export_values();
-	/*
-    py::class_<cv::Mat>(m, "Image", py::buffer_protocol())
-        .def_buffer([](cv::Mat& image) -> py::buffer_info {
-            return py::buffer_info(
-                image.data,
-                sizeof(unsigned char),
-                py::format_descriptor<unsigned char>::format(),
-                3,
-                { image.rows, image.cols, image.channels() },
-                { sizeof(unsigned char) * image.channels() * image.cols,
-                  sizeof(unsigned char) * image.channels(),
-                  sizeof(unsigned char) }
-            );
-        });*/
 
   m.attr("__version__") = "0.1.alpha";
 }

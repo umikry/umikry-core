@@ -27,7 +27,7 @@ int main(int argc, const char** argv) {
 
     string source;
     string destination;
-    string model_path;
+    string model_path = ".";
 
     for (int i = 1; i < argc; i++) {
         string arg = argv[i];
