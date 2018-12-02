@@ -27,15 +27,17 @@ def pad_to_next_multiply_of_n(image, n):
 
 class UmikryFaceTransformator():
     def __init__(self, method='AUTOENCODER'):
+        root_dir = os.path.dirname(os.path.realpath(__file__))
+
         if method == 'AUTOENCODER':
             self.method = method
             self.model = self.build_autoencoder()
-            self.model.load_weights(os.path.join('models', 'autoencoder_weights.h5'), by_name=True)
+            self.model.load_weights(os.path.join(root_dir, 'models', 'autoencoder_weights.h5'), by_name=True)
         elif method == 'GAN':
             self.method = method
             generator_input, generator_output = build_generator()
             self.model = Model(generator_input, generator_output)
-            self.model.load_weights(os.path.join('models', 'generator_weights.h5'))
+            self.model.load_weights(os.path.join(root_dir, 'models', 'generator_weights.h5'))
         elif method == 'BLUR':
             self.method = method
         else:
@@ -63,40 +65,58 @@ class UmikryFaceTransformator():
 
         return Model(inputs=input_image, outputs=decoder)
 
+    def __get_unfamilar_face(self, face):
+        if type(face) is dict:
+            if face['is_familiar']:
+                return None
+            else:
+                return face['bounding_box']
+        else:
+            return face
+
     def transform(self, image, faces):
         if self.method == 'BLUR':
-            for _, (x, y, w, h) in faces.items():
-                if h < image.shape[0] and w < image.shape[1]:
-                    image[y:h, x:w] = cv2.blur(image[y:h, x:w], (25, 25))
+            for _, face in faces.items():
+                face = self.__get_unfamilar_face(face)
+                if face:
+                    (x, y, w, h) = face
+                    if h < image.shape[0] and w < image.shape[1]:
+                        image[y:h, x:w] = cv2.blur(image[y:h, x:w], (25, 25))
 
             return image
         elif self.method == 'AUTOENCODER':
-            for _, (x, y, w, h) in faces.items():
-                if h < image.shape[0] and w < image.shape[1]:
-                    blurry = cv2.blur(image[y:h, x:w], (25, 25)) / 255.0
-                    blurry, border = pad_to_next_multiply_of_n(blurry, 8)
+            for _, face in faces.items():
+                face = self.__get_unfamilar_face(face)
+                if face:
+                    (x, y, w, h) = face
+                    if h < image.shape[0] and w < image.shape[1]:
+                        blurry = cv2.blur(image[y:h, x:w], (25, 25)) / 255.0
+                        blurry, border = pad_to_next_multiply_of_n(blurry, 8)
 
-                    prediction = self.model.predict(np.array([blurry]))[0]
-                    prediction = prediction[border[0]:(prediction.shape[0] - border[1]),
-                                            border[2]:(prediction.shape[1] - border[3]), :]
+                        prediction = self.model.predict(np.array([blurry]))[0]
+                        prediction = prediction[border[0]:(prediction.shape[0] - border[1]),
+                                                border[2]:(prediction.shape[1] - border[3]), :]
 
-                    image[y:h, x:w] = (prediction * 255).astype(np.uint8)
+                        image[y:h, x:w] = (prediction * 255).astype(np.uint8)
 
             return image
         elif self.method == 'GAN':
-            for _, (x, y, w, h) in faces.items():
-                if h < image.shape[0] and w < image.shape[1]:
-                    section, border = pad_to_next_multiply_of_n(image[y:h, x:w], 4)
-                    section = cv2.resize(section, (section.shape[1] // 4, section.shape[0] // 4)) / 255.0
+            for _, face in faces.items():
+                face = self.__get_unfamilar_face(face)
+                if face:
+                    (x, y, w, h) = face
+                    if h < image.shape[0] and w < image.shape[1]:
+                        section, border = pad_to_next_multiply_of_n(image[y:h, x:w], 4)
+                        section = cv2.resize(section, (section.shape[1] // 4, section.shape[0] // 4)) / 255.0
 
-                    prediction = self.model.predict(np.array([section]))[0] * 0.5 + 0.5
+                        prediction = self.model.predict(np.array([section]))[0] * 0.5 + 0.5
 
-                    prediction = (prediction[border[0]:(prediction.shape[0] - border[1]),
-                                             border[2]:(prediction.shape[1] - border[3]), :] * 255)
+                        prediction = (prediction[border[0]:(prediction.shape[0] - border[1]),
+                                                 border[2]:(prediction.shape[1] - border[3]), :] * 255)
 
-                    prediction = prediction.astype(np.uint8)
-                    face = self.__smoth_replace(image[y:h, x:w], prediction)
-                    image[y:h, x:w] = face
+                        prediction = prediction.astype(np.uint8)
+                        face = self.__smoth_replace(image[y:h, x:w], prediction)
+                        image[y:h, x:w] = face
 
             return image
 

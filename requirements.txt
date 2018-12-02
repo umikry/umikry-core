@@ -1,4 +1,3 @@
-matplotlib
 dlib
 wget>=3.2
 requests>=2.20.0
