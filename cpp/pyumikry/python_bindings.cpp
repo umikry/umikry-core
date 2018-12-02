@@ -23,8 +23,8 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>
 #include <opencv2/core.hpp>
 #include <opencv2/imgproc.hpp>
 
-#include "UmikryFaceDetector.hpp"
-#include "UmikryFaceTransformator.hpp"
+#include "umikrycore/UmikryFaceDetector.hpp"
+#include "umikrycore/UmikryFaceTransformator.hpp"
 
 namespace py = pybind11;
 
