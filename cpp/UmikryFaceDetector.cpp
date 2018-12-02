@@ -71,8 +71,9 @@ bool UmikryFaceDetector::downloadUrlAndSaveContent(const std::string & url, cons
 		res = curl_easy_perform(curl);
 		curl_easy_cleanup(curl);
 		fclose(fp);
+		return true;
 	}
-
+	return false;
 #endif // WIN32
 }
 
