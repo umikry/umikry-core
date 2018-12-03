@@ -21,8 +21,8 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>
 #include <string>
 #include <chrono>
 
-#include "umikrycore/UmikryFaceDetector.hpp"
-#include "umikrycore/UmikryFaceTransformator.hpp"
+#include "umikrycore/FaceDetector.hpp"
+#include "umikrycore/FaceTransformator.hpp"
 
 using namespace std;
 using namespace cv;
@@ -46,9 +46,8 @@ int main(int argc, const char** argv) {
     string destination;
     string model_path = ".";
 
-    for (int i = 1; i < argc; i++) {
-        string arg = argv[i];
-
+    for (int i = 1; i < argc; ++i) {
+        const string arg = argv[i];
         if ((arg == "-h") || (arg == "--help")) {
             show_usage(argv[0]);
             return 0;
@@ -77,39 +76,38 @@ int main(int argc, const char** argv) {
     }
 
     if (!source.empty() && !destination.empty() && !model_path.empty()) {
-        Mat image = imread(source);
-
+        auto image = imread(source);
         if (!image.data) {
           cout << "The image '" << source << "' is not readable." << endl;
           return 1;
         }
 
-        std::cout << image.dims << " " << image.size() << " " << image.rows << " " << image.cols << " " << image.channels() << std::endl; 
+        cout << image.dims << " " << image.size() << " " << image.rows << " " << image.cols << " " << image.channels() << endl; 
 
-        UmikryFaceDetector umikryFaceDetector = UmikryFaceDetector(DetectionMethod::CAFFE, model_path);
+        umikry::FaceDetector umikryFaceDetector(umikry::DetectionMethod::CAFFE, model_path);
         
-        std::chrono::steady_clock::time_point start = std::chrono::steady_clock::now();
-        vector<Rect> faces = umikryFaceDetector.detect(image);
-        std::chrono::steady_clock::time_point end = std::chrono::steady_clock::now();
-        std::chrono::duration<double> elapsed_seconds = end - start;
+        auto start = chrono::steady_clock::now();
+		auto faces = umikryFaceDetector.detect(image);
+        auto end = chrono::steady_clock::now();
+        auto elapsed_seconds = end - start;
 
         cout << "Detect " << faces.size() << " faces in " 
              << elapsed_seconds.count()
              << " s" << endl;
         cout << "Use transformation method: blur" << endl;
         
-        UmikryFaceTransformator umikryFaceTransformator = UmikryFaceTransformator(TransformationMethod::BLUR);
+        umikry::FaceTransformator umikryFaceTransformator(umikry::TransformationMethod::BLUR);
         
-        start = std::chrono::steady_clock::now();
+        start = chrono::steady_clock::now();
         umikryFaceTransformator.transform(image, faces);
-        end = std::chrono::steady_clock::now();
+        end = chrono::steady_clock::now();
         elapsed_seconds = end - start;
         
         cout << "Transform " << faces.size() << " faces in " 
              << elapsed_seconds.count()
              << " s" << endl;
 
-        for (Rect face : faces) {
+        for (const Rect face : faces) {
             rectangle(image, face, Scalar(0, 0, 255), 2);
         }
 
