@@ -3,7 +3,9 @@ project(umikry)
 
 find_package(pybind11 REQUIRED)
 find_package( OpenCV REQUIRED COMPONENTS core highgui imgproc dnn imgcodecs )
+if (UNIX)
 find_package( CURL REQUIRED ) 
+endif (UNIX)
 
 add_definitions("-std=c++11")
 
