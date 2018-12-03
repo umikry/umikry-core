@@ -6,5 +6,6 @@ set(SOURCE_FILES
   umikry.cpp
 )
 
-add_executable(umikry-core ${SOURCE_FILES})
-target_link_libraries(umikry-core ${OpenCV_LIBS} ${CURL_LIBRARIES} umikrycore)
+add_executable(umikry-core-app ${SOURCE_FILES})
+set_target_properties(umikry-core-app PROPERTIES OUTPUT_NAME umikry)
+target_link_libraries(umikry-core-app ${OpenCV_LIBS} ${CURL_LIBRARIES} umikrycore)
