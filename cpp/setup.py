@@ -26,7 +26,7 @@ from setuptools.command.build_ext import build_ext
 from distutils.version import LooseVersion
 
 
-__version__ = '0.1-alpha'
+__version__ = '0.2.0'
 
 
 class CMakeExtension(Extension):
@@ -89,7 +89,7 @@ setup(
     cmdclass=dict(build_ext=CMakeBuild),
     zip_safe=False,
     classifiers=[
-        "License :: OSI Approved :: AGPL-3",
-        "Operating System :: OS Independent",
+        "License :: OSI Approved :: GNU Affero General Public License v3",
+        "Operating System :: OS Independent"
     ],
 )

@@ -1,5 +1,5 @@
 if (UNIX)
-  find_package( CURL REQUIRED ) 
+find_package( CURL REQUIRED ) 
 endif (UNIX)
 
 add_definitions("-std=c++11")
@@ -14,4 +14,4 @@ set(SOURCE_FILES
 )
 
 add_library(umikrycore ${SOURCE_FILES})
-target_link_libraries(umikrycore)
+target_link_libraries(umikrycore ${OpenCV_LIBS} ${CURL_LIBRARIES})
