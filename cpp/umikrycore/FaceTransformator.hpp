@@ -22,17 +22,24 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>
 #include <opencv2/core.hpp>
 #include <opencv2/imgproc.hpp>
 
+namespace umikry {
+
 enum class TransformationMethod { BLUR };
 
-class UmikryFaceTransformator {
-    public:
-        UmikryFaceTransformator(TransformationMethod transformation_method);
-        ~UmikryFaceTransformator() {};
+class FaceTransformator {
+public:
+	FaceTransformator(TransformationMethod transformation_method);
+	~FaceTransformator() {};
 
-        void transform(cv::Mat& image, const std::vector<cv::Rect>& faces);
-    private:
-        void blur_transformation(cv::Mat& image, const std::vector<cv::Rect>& faces);
-        TransformationMethod transformation_method;
+	void transform(cv::Mat& image, const std::vector<cv::Rect>& faces);
+
+	inline TransformationMethod getTransformationMethod() const { return transformationMethod; }
+private:
+	void blurTransformation(cv::Mat& image, const std::vector<cv::Rect>& faces);
+	
+	const TransformationMethod transformationMethod;
 };
+
+}
 
 #endif

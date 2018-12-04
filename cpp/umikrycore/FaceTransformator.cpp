@@ -15,19 +15,21 @@ You should have received a copy of the GNU Affero General Public License, versio
 along with this program.  If not, see <http://www.gnu.org/licenses/>
 */
 
-#include "UmikryFaceTransformator.hpp"
+#include "FaceTransformator.hpp"
 
-UmikryFaceTransformator::UmikryFaceTransformator(TransformationMethod transformation_method) {
-    this->transformation_method = transformation_method;
+using namespace umikry;
+
+FaceTransformator::FaceTransformator(TransformationMethod transformationMethod)
+	: transformationMethod(transformationMethod) {
 }
 
-void UmikryFaceTransformator::transform(cv::Mat& image, const std::vector<cv::Rect>& faces) {
-    if (transformation_method == TransformationMethod::BLUR) {
-        blur_transformation(image, faces);
+void FaceTransformator::transform(cv::Mat& image, const std::vector<cv::Rect>& faces) {
+    if (transformationMethod == TransformationMethod::BLUR) {
+        blurTransformation(image, faces);
     }
 }
 
-void UmikryFaceTransformator::blur_transformation(cv::Mat& image, const std::vector<cv::Rect>& faces) {
+void FaceTransformator::blurTransformation(cv::Mat& image, const std::vector<cv::Rect>& faces) {
 	for (cv::Rect face : faces) {
 		if ((face.y + face.height) < image.rows && (face.x + face.width) < image.cols) {
 			cv::blur(image(face), image(face), cv::Size(25, 25));

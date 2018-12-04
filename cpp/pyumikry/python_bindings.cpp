@@ -23,12 +23,12 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>
 #include <opencv2/core.hpp>
 #include <opencv2/imgproc.hpp>
 
-#include "UmikryFaceDetector.hpp"
-#include "UmikryFaceTransformator.hpp"
+#include "umikrycore/FaceDetector.hpp"
+#include "umikrycore/FaceTransformator.hpp"
 
 namespace py = pybind11;
 
-py::array_t<uint8_t> umikry(py::array_t<uint8_t> input, const std::string &model_path, DetectionMethod detectionMethod, TransformationMethod transformationMethod) {
+py::array_t<uint8_t> umikryFunc(py::array_t<uint8_t> input, const std::string &model_path, umikry::DetectionMethod detectionMethod, umikry::TransformationMethod transformationMethod) {
 	if (input.ndim() != 3) {
 		throw std::invalid_argument("The image needs to have 3 dimensions.");
 	}
@@ -40,8 +40,8 @@ py::array_t<uint8_t> umikry(py::array_t<uint8_t> input, const std::string &model
 	cv::Mat cv_image(static_cast<int>(input.shape()[0]), static_cast<int>(input.shape()[1]), CV_8UC3);
 	memcpy(cv_image.data, input.data(), input.nbytes());
 
-	UmikryFaceDetector umikryFaceDetector = UmikryFaceDetector(DetectionMethod::CAFFE, model_path);
-	UmikryFaceTransformator umikryFaceTransformator = UmikryFaceTransformator(TransformationMethod::BLUR);
+	umikry::FaceDetector umikryFaceDetector(umikry::DetectionMethod::CAFFE, model_path);
+	umikry::FaceTransformator umikryFaceTransformator(umikry::TransformationMethod::BLUR);
 	umikryFaceTransformator.transform(cv_image, umikryFaceDetector.detect(cv_image));
 
 	auto result = py::array_t<uint8_t>(std::vector<ssize_t>(input.shape(), input.shape() + input.ndim()));
@@ -49,12 +49,12 @@ py::array_t<uint8_t> umikry(py::array_t<uint8_t> input, const std::string &model
 	return result;
 }
 
-py::array_t<uint8_t> umikry(py::array_t<uint8_t> input, DetectionMethod detectionMethod, TransformationMethod transformationMethod) {
-	return umikry(input, ".", detectionMethod, transformationMethod);
+py::array_t<uint8_t> umikryFunc(py::array_t<uint8_t> input, umikry::DetectionMethod detectionMethod, umikry::TransformationMethod transformationMethod) {
+	return umikryFunc(input, ".", detectionMethod, transformationMethod);
 }
 
-py::array_t<uint8_t> umikry(py::array_t<uint8_t> input) {
-	return umikry(input, ".", DetectionMethod::CAFFE, TransformationMethod::BLUR);
+py::array_t<uint8_t> umikryFunc(py::array_t<uint8_t> input) {
+	return umikryFunc(input, ".", umikry::DetectionMethod::CAFFE, umikry::TransformationMethod::BLUR);
 }
 
 PYBIND11_MODULE(umikry, m) {
@@ -68,18 +68,18 @@ PYBIND11_MODULE(umikry, m) {
     umikry
     )pbdoc";
 
-	py::enum_<DetectionMethod>(m, "DetectionMethod")
-        .value("HAAR", DetectionMethod::HAAR)
-        .value("CAFFE", DetectionMethod::CAFFE)
+	py::enum_<umikry::DetectionMethod>(m, "DetectionMethod")
+        .value("HAAR", umikry::DetectionMethod::HAAR)
+        .value("CAFFE", umikry::DetectionMethod::CAFFE)
         .export_values();
 
-    py::enum_<TransformationMethod>(m, "TransformationMethod")
-        .value("BLUR", TransformationMethod::BLUR)
+    py::enum_<umikry::TransformationMethod>(m, "TransformationMethod")
+        .value("BLUR", umikry::TransformationMethod::BLUR)
         .export_values();
 
-	m.def("umikry", py::overload_cast<py::array_t<uint8_t>, const std::string&, DetectionMethod, TransformationMethod>(&umikry), R"pbdoc(transforms faces found by the umikry face detector)pbdoc");
-	m.def("umikry", py::overload_cast<py::array_t<uint8_t>, DetectionMethod, TransformationMethod>(&umikry), R"pbdoc(transforms faces found by the umikry face detector)pbdoc");
-	m.def("umikry", py::overload_cast<py::array_t<uint8_t>>(&umikry), R"pbdoc(transforms faces found by the umikry face detector)pbdoc");
+	m.def("umikry", py::overload_cast<py::array_t<uint8_t>, const std::string&, umikry::DetectionMethod, umikry::TransformationMethod>(&umikryFunc), R"pbdoc(transforms faces found by the umikry face detector)pbdoc");
+	m.def("umikry", py::overload_cast<py::array_t<uint8_t>, umikry::DetectionMethod, umikry::TransformationMethod>(&umikryFunc), R"pbdoc(transforms faces found by the umikry face detector)pbdoc");
+	m.def("umikry", py::overload_cast<py::array_t<uint8_t>>(&umikryFunc), R"pbdoc(transforms faces found by the umikry face detector)pbdoc");
 
   m.attr("__version__") = "0.1.alpha";
 }
