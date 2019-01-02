@@ -8,7 +8,7 @@ import wget
 import cv2
 
 
-class UmikryFaceRecognizer():
+class UmikryFaceRecognizer(object):
 
     def __init__(self, shape_predictor='SMALL', threshold=0.6):
         self.shape_predictor = shape_predictor
